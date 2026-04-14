@@ -69,7 +69,7 @@
       border:2.5px solid #fff;transition:transform .18s;
     }
     .fcard:hover{transform:scale(1.06);}
-    .fcard-img{width:100%;object-fit:cover;object-position:center top;display:block;}
+    .fcard-img{width:100%;object-fit:cover;object-position:center center;display:block;}
     .fcard-img-placeholder{width:100%;display:flex;align-items:center;justify-content:center;background:#1e293b;}
     .fcard-label{padding:3px 4px;font-weight:700;text-align:center;line-height:1.2;color:#0f172a;border-top:2.5px solid;}
     .fcard-arrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;}
@@ -233,6 +233,14 @@
     #gps-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;margin-right:5px;vertical-align:middle;}
     #gps-dot.on{background:#22c55e;animation:pulse 1.5s infinite;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    #gps-permit-btn{
+      display:block;position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
+      z-index:700;background:#2563eb;color:#fff;border:none;border-radius:14px;
+      padding:13px 28px;font-size:14px;font-weight:700;cursor:pointer;
+      white-space:nowrap;box-shadow:0 4px 24px rgba(37,99,235,0.55);
+      animation:pulse-btn 2s infinite;
+    }
+    @keyframes pulse-btn{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.04)}}
 
     #ar-hint{
       display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
@@ -301,6 +309,7 @@
 </button>
 <div id="nav-badge"><span id="nav-text"></span><button onclick="stopNav()">✕ Parar</button></div>
 <div id="gps-badge"><span id="gps-dot"></span><span id="gps-text">Buscando GPS…</span></div>
+<button id="gps-permit-btn" onclick="requestGPS()">📍 Permitir ubicación</button>
 <div id="ar-hint">📍 Apunta el móvil hacia la calle — los espacios aparecerán en la dirección correcta</div>
 
 <script>
@@ -425,7 +434,7 @@ function cardSize(z){
 function makeCard(e,zoom){
   const s=cardSize(zoom);
   const img=e.img
-    ?`<img class="fcard-img" src="${e.img}" style="height:${s.h}px;object-position:center top;"
+    ?`<img class="fcard-img" src="${e.img}" style="height:${s.h}px;object-position:center center;"
         onerror="this.outerHTML='<div class=fcard-img-placeholder style=height:${s.h}px;font-size:${Math.round(s.h*.4)}px>${e.emoji}</div>'">`
     :`<div class="fcard-img-placeholder" style="height:${s.h}px;font-size:${Math.round(s.h*.4)}px">${e.emoji}</div>`;
   const label=zoom>=15
@@ -494,21 +503,50 @@ function openPanel(e){
 function closePanel(){document.getElementById('info-panel').style.display='none';}
 
 // GPS
-let userM=null;
-navigator.geolocation&&navigator.geolocation.watchPosition(pos=>{
-  const{latitude:la,longitude:ln,accuracy:ac}=pos.coords;
+let userM = null;
+
+function onGPSSuccess(pos) {
+  const {latitude:la, longitude:ln, accuracy:ac} = pos.coords;
+  document.getElementById('gps-permit-btn').style.display = 'none';
   if (userM) {
     userM.setLatLng([la,ln]);
-    // Si navegación activa, seguir al usuario
     if (navActive) map.panTo([la,ln], {animate:true, duration:0.5});
   } else {
     userM = L.marker([la,ln],{icon:personIcon,zIndexOffset:9999}).addTo(map);
     map.setView([la,ln],17);
   }
   document.getElementById('gps-dot').classList.add('on');
-  document.getElementById('gps-text').textContent=`GPS activo (±${Math.round(ac)}m)`;
-},()=>{document.getElementById('gps-text').textContent='GPS no disponible';},
-{enableHighAccuracy:true,maximumAge:2000,timeout:10000});
+  document.getElementById('gps-text').textContent = `GPS activo (±${Math.round(ac)}m)`;
+}
+
+function onGPSError(err) {
+  if (err.code === 1) {
+    document.getElementById('gps-text').textContent = 'GPS bloqueado';
+    document.getElementById('gps-permit-btn').textContent = '⚙️ Ajustes > Safari > Ubicación';
+    document.getElementById('gps-permit-btn').style.background = '#d97706';
+  } else {
+    document.getElementById('gps-text').textContent = 'Toca para activar GPS';
+  }
+}
+
+function requestGPS() {
+  if (!navigator.geolocation) { alert('Tu navegador no soporta geolocalización.'); return; }
+  document.getElementById('gps-permit-btn').textContent = '⏳ Solicitando permiso…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    onGPSSuccess(pos);
+    navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, {enableHighAccuracy:true, maximumAge:2000, timeout:15000});
+  }, onGPSError, {enableHighAccuracy:true, timeout:15000});
+}
+
+// Intentar automáticamente al cargar
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(pos => {
+    onGPSSuccess(pos);
+    navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, {enableHighAccuracy:true, maximumAge:2000, timeout:15000});
+  }, () => {
+    document.getElementById('gps-text').textContent = 'Toca para activar GPS';
+  }, {enableHighAccuracy:true, timeout:5000});
+});
 
 // BUSCADOR
 function renderDD(items){
