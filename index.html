@@ -561,6 +561,79 @@ function selectEQ(id){
   setTimeout(()=>openPanel(e),400);
 }
 
+// ═══════════════════════════════
+// ROUTING — dentro del mapa
+// ═══════════════════════════════
+let routeLayer  = null;
+let currentDest = null;
+let travelMode  = 'foot';
+let navActive   = false;
+
+function setTravel(mode, btn) {
+  travelMode = mode;
+  document.querySelectorAll('.travel-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function routeTo() {
+  if (!currentDest) return;
+  closePanel();
+  if (!userM) { flashMsg('⚠️ Activa el GPS para calcular la ruta', '#d97706'); return; }
+  flashMsg('⏳ Calculando ruta…', '#60a5fa');
+
+  const origin = userM.getLatLng();
+  const url = `https://router.project-osrm.org/route/v1/${travelMode}/`
+    + `${origin.lng},${origin.lat};${currentDest.lng},${currentDest.lat}`
+    + `?overview=full&geometries=geojson`;
+
+  fetch(url).then(r => r.json()).then(data => {
+    if (!data.routes?.length) { flashMsg('❌ No se pudo calcular la ruta','#ef4444'); return; }
+    if (routeLayer) map.removeLayer(routeLayer);
+    // Eliminar capa de borde anterior
+    map.eachLayer(l => { if (l instanceof L.Polyline && l !== routeLayer) map.removeLayer(l); });
+
+    const coords = data.routes[0].geometry.coordinates.map(c => [c[1],c[0]]);
+    const dist   = (data.routes[0].distance/1000).toFixed(2);
+    const mins   = Math.ceil(data.routes[0].duration/60);
+    const icon   = travelMode==='foot' ? '🚶' : '🚗';
+
+    // Borde oscuro debajo
+    L.polyline(coords,{color:'#0e7490',weight:10,opacity:0.4,lineCap:'round'}).addTo(map);
+    // Línea principal
+    routeLayer = L.polyline(coords,{color:'#22d3ee',weight:6,opacity:0.9,lineCap:'round'}).addTo(map);
+
+    map.fitBounds(routeLayer.getBounds(),{padding:[70,70]});
+    navActive = true;
+
+    const badge = document.getElementById('nav-badge');
+    document.getElementById('nav-text').textContent = `${icon} ${mins} min · ${dist} km`;
+    badge.style.display = 'flex';
+
+  }).catch(() => flashMsg('❌ Error de conexión','#ef4444'));
+}
+
+function stopNav() {
+  navActive = false;
+  document.getElementById('nav-badge').style.display = 'none';
+  map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+  routeLayer = null;
+  buildMarkers(); // rebuild markers after removing polylines
+}
+
+function flashMsg(text, color) {
+  const prev = document.getElementById('flash-msg');
+  if (prev) prev.remove();
+  const d = document.createElement('div');
+  d.id = 'flash-msg';
+  d.style.cssText = `position:fixed;bottom:70px;left:50%;transform:translateX(-50%);
+    z-index:700;background:rgba(10,15,28,.96);border:1.5px solid ${color};
+    border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;
+    color:${color};white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5);`;
+  d.textContent = text;
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 3000);
+}
+
 // AR — cámara solo se activa al pulsar botón AR
 let arBuilt = false;
 
