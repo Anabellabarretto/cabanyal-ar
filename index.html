@@ -602,10 +602,19 @@ function routeTo() {
     const mins   = Math.ceil(data.routes[0].duration/60);
     const icon   = travelMode==='foot' ? '🚶' : '🚗';
 
-    // Borde oscuro debajo
-    L.polyline(coords,{color:'#0e7490',weight:10,opacity:0.4,lineCap:'round'}).addTo(map);
-    // Línea principal
-    routeLayer = L.polyline(coords,{color:'#22d3ee',weight:6,opacity:0.9,lineCap:'round'}).addTo(map);
+    if (travelMode === 'foot') {
+      // A pie — puntitos como Google Maps
+      L.polyline(coords,{color:'#ffffff',weight:10,opacity:0.3,lineCap:'round'}).addTo(map);
+      routeLayer = L.polyline(coords,{
+        color:'#22d3ee', weight:5, opacity:0.95,
+        lineCap:'round', lineJoin:'round',
+        dashArray:'1 12'
+      }).addTo(map);
+    } else {
+      // En coche — línea sólida con borde
+      L.polyline(coords,{color:'#0e7490',weight:10,opacity:0.4,lineCap:'round'}).addTo(map);
+      routeLayer = L.polyline(coords,{color:'#22d3ee',weight:6,opacity:0.9,lineCap:'round'}).addTo(map);
+    }
 
     map.fitBounds(routeLayer.getBounds(),{padding:[70,70]});
     navActive = true;
