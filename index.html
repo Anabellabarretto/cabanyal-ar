@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Cabanyal en Red</title>
+
+  <!-- Leaflet (mapa interactivo) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- AR.js + A-Frame (realidad aumentada geolocada) -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0f172a;
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── CABECERA ── */
+    #header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    #header h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #60a5fa;
+      letter-spacing: 0.5px;
+    }
+
+    #header p {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 1px;
+    }
+
+    /* ── BOTONES DE MODO ── */
+    #mode-buttons {
+      display: flex;
+      gap: 6px;
+    }
+
+    .mode-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: #94a3b8;
+    }
+
+    .mode-btn.active {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #fff;
+    }
+
+    /* ── MAPA ── */
+    #map-container {
+      position: fixed;
+      top: 56px; left: 0; right: 0; bottom: 0;
+      z-index: 100;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── AR ── */
+    #ar-container {
+      display: none;
+      position: fixed;
+      top: 56px; left: 0; right: 0; bottom: 0;
+      z-index: 200;
+    }
+
+    #ar-container a-scene {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── PANEL DE INFO (mapa) ── */
+    #info-panel {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 500;
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding: 16px;
+      max-height: 220px;
+      border-radius: 16px 16px 0 0;
+    }
+
+    #info-panel h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #60a5fa;
+      margin-bottom: 4px;
+    }
+
+    #info-panel .tipo {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    #info-panel p {
+      font-size: 13px;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    #info-links {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .link-btn {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+    }
+
+    .link-btn.primary { background: #2563eb; color: #fff; }
+    .link-btn.secondary { background: rgba(255,255,255,0.1); color: #cbd5e1; }
+
+    #close-panel {
+      position: absolute;
+      top: 12px; right: 14px;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    /* ── AVISO AR ── */
+    #ar-hint {
+      display: none;
+      position: fixed;
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 600;
+      background: rgba(15,23,42,0.88);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 10px 18px;
+      font-size: 12px;
+      color: #94a3b8;
+      text-align: center;
+      max-width: 280px;
+    }
+
+    /* ── BADGE DE POSICIÓN ── */
+    #gps-badge {
+      position: fixed;
+      bottom: 80px; right: 14px;
+      z-index: 400;
+      background: rgba(15,23,42,0.88);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    #gps-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #ef4444;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+
+    #gps-dot.active { background: #22c55e; animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- CABECERA -->
+  <div id="header">
+    <div>
+      <h1>Cabanyal en Red</h1>
+      <p>Oferta cultural del barrio</p>
+    </div>
+    <div id="mode-buttons">
+      <button class="mode-btn active" id="btn-map" onclick="setMode('map')">🗺 Mapa</button>
+      <button class="mode-btn" id="btn-ar" onclick="setMode('ar')">📷 AR</button>
+    </div>
+  </div>
+
+  <!-- MAPA -->
+  <div id="map-container">
+    <div id="map"></div>
+  </div>
+
+  <!-- AR -->
+  <div id="ar-container">
+    <a-scene
+      vr-mode-ui="enabled: false"
+      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false; trackingMethod: best;"
+      renderer="antialias: true; alpha: true"
+      embedded>
+
+      <!-- Cámara con GPS -->
+      <a-camera gps-camera rotation-reader></a-camera>
+
+      <!-- Los marcadores AR se generan dinámicamente por JS -->
+
+    </a-scene>
+  </div>
+
+  <!-- PANEL DE INFO (mapa) -->
+  <div id="info-panel">
+    <button id="close-panel" onclick="closePanel()">✕</button>
+    <h2 id="panel-nombre"></h2>
+    <div class="tipo" id="panel-tipo"></div>
+    <p id="panel-desc"></p>
+    <div id="info-links">
+      <a class="link-btn primary" id="panel-web" href="#" target="_blank">Ver programación</a>
+      <a class="link-btn secondary" id="panel-maps" href="#" target="_blank">Cómo llegar</a>
+    </div>
+  </div>
+
+  <!-- AVISO AR -->
+  <div id="ar-hint">
+    📍 Apunta el móvil hacia la calle — los espacios culturales aparecerán flotando en la dirección correcta
+  </div>
+
+  <!-- BADGE GPS -->
+  <div id="gps-badge">
+    <span id="gps-dot"></span>
+    <span id="gps-text">Buscando GPS…</span>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════
+    // DATOS DE EQUIPAMIENTOS CULTURALES DEL CABANYAL
+    // ⚠️ Verifica y actualiza las coordenadas y URLs
+    //    antes de mostrar el prototipo
+    // ═══════════════════════════════════════════════
+    const equipamientos = [
+      {
+        id: 1,
+        nombre: "Centre Cultural Reina 121",
+        tipo: "Centro cultural municipal",
+        desc: "Centro de proximidad coprogramado con las entidades y asociaciones del barrio. Talleres, exposiciones y actividades culturales.",
+        lat: 39.4697,
+        lng: -0.3267,
+        web: "https://cultural.valencia.es/es/espais/centro-cultural-reina-121/",
+        color: "#2563eb"
+      },
+      {
+        id: 2,
+        nombre: "Centre Cultural Escorxador",
+        tipo: "Centro cultural municipal",
+        desc: "Ubicado en el antiguo matadero del barrio (1910), rehabilitado como espacio cultural. Programación vinculada a la memoria del Cabanyal.",
+        lat: 39.4700,
+        lng: -0.3255,
+        web: "https://cultural.valencia.es/es/espais/centro-cultural-escorxador/",
+        color: "#7c3aed"
+      },
+      {
+        id: 3,
+        nombre: "Teatro La Estrella",
+        tipo: "Teatro",
+        desc: "Teatro de barrio con larga tradición en el Cabanyal. Programación de artes escénicas, teatro familiar y espectáculos locales.",
+        lat: 39.4703,
+        lng: -0.3280,
+        web: "https://www.teatrolaestrella.es",
+        color: "#dc2626"
+      },
+      {
+        id: 4,
+        nombre: "Biblioteca Pública Cabanyal",
+        tipo: "Biblioteca",
+        desc: "Biblioteca pública de proximidad con fondo bibliográfico, hemeroteca y programación de actividades culturales para todos los públicos.",
+        lat: 39.4688,
+        lng: -0.3272,
+        web: "https://bibliotecas.valencia.es",
+        color: "#059669"
+      },
+      {
+        id: 5,
+        nombre: "Hub Cultural Cabanyal",
+        tipo: "Red de agentes culturales",
+        desc: "Plataforma que conecta más de 60 agentes culturales del Distrito Marítimo. Punto de referencia para la programación cultural del barrio.",
+        lat: 39.4693,
+        lng: -0.3260,
+        web: "https://www.pro21cultural.com/hub-cultural-cabanyal-2/",
+        color: "#d97706"
+      },
+      {
+        id: 6,
+        nombre: "Mercado del Cabanyal",
+        tipo: "Patrimonio y espacio cultural",
+        desc: "Mercado histórico del barrio, espacio de referencia identitaria y cultural de la comunidad marinera del Cabanyal-Canyamelar.",
+        lat: 39.4680,
+        lng: -0.3285,
+        web: "https://www.mercadosmunicipales.es",
+        color: "#0891b2"
+      }
+    ];
+
+    // ═══════════════════════════════════════════════
+    // MAPA CON LEAFLET
+    // ═══════════════════════════════════════════════
+    const map = L.map('map', { zoomControl: true }).setView([39.4693, -0.3270], 16);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Marcador de posición del usuario
+    let userMarker = null;
+
+    // Añadir marcadores de equipamientos
+    equipamientos.forEach(e => {
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="
+          background:${e.color};
+          width:14px; height:14px;
+          border-radius:50%;
+          border:2.5px solid white;
+          box-shadow:0 2px 8px rgba(0,0,0,0.4);
+        "></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
+      });
+
+      const marker = L.marker([e.lat, e.lng], { icon }).addTo(map);
+
+      marker.on('click', () => openPanel(e));
+    });
+
+    function openPanel(e) {
+      document.getElementById('panel-nombre').textContent = e.nombre;
+      document.getElementById('panel-tipo').textContent = e.tipo;
+      document.getElementById('panel-desc').textContent = e.desc;
+      document.getElementById('panel-web').href = e.web;
+      document.getElementById('panel-maps').href =
+        `https://www.google.com/maps/dir/?api=1&destination=${e.lat},${e.lng}&travelmode=walking`;
+      document.getElementById('info-panel').style.display = 'block';
+    }
+
+    function closePanel() {
+      document.getElementById('info-panel').style.display = 'none';
+    }
+
+    // ═══════════════════════════════════════════════
+    // GEOLOCALIZACIÓN EN TIEMPO REAL
+    // ═══════════════════════════════════════════════
+    const userIcon = L.divIcon({
+      className: '',
+      html: `<div style="
+        background:#3b82f6;
+        width:16px; height:16px;
+        border-radius:50%;
+        border:3px solid white;
+        box-shadow:0 0 0 4px rgba(59,130,246,0.3);
+      "></div>`,
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
+    });
+
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(
+        (pos) => {
+          const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+
+          if (!userMarker) {
+            userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(map);
+            map.setView([lat, lng], 17);
+          } else {
+            userMarker.setLatLng([lat, lng]);
+          }
+
+          document.getElementById('gps-dot').classList.add('active');
+          document.getElementById('gps-text').textContent = `GPS activo (±${Math.round(accuracy)}m)`;
+        },
+        () => {
+          document.getElementById('gps-text').textContent = 'GPS no disponible';
+        },
+        { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+      );
+    }
+
+    // ═══════════════════════════════════════════════
+    // MARCADORES AR CON AR.JS
+    // ═══════════════════════════════════════════════
+    function buildARMarkers() {
+      const scene = document.querySelector('a-scene');
+      if (!scene) return;
+
+      equipamientos.forEach(e => {
+        // Entidad principal geolocada
+        const entity = document.createElement('a-entity');
+        entity.setAttribute('gps-entity-place', `latitude: ${e.lat}; longitude: ${e.lng}`);
+        entity.setAttribute('look-at', '[gps-camera]');
+        entity.setAttribute('scale', '15 15 15');
+
+        // Texto del marcador
+        const text = document.createElement('a-text');
+        text.setAttribute('value', `${e.nombre}\n${e.tipo}`);
+        text.setAttribute('color', 'white');
+        text.setAttribute('align', 'center');
+        text.setAttribute('width', '6');
+        text.setAttribute('position', '0 1.5 0');
+
+        // Fondo del marcador
+        const box = document.createElement('a-box');
+        box.setAttribute('color', e.color);
+        box.setAttribute('opacity', '0.85');
+        box.setAttribute('width', '5.5');
+        box.setAttribute('height', '1.2');
+        box.setAttribute('depth', '0.1');
+        box.setAttribute('position', '0 1.5 -0.05');
+
+        // Círculo indicador en el suelo
+        const circle = document.createElement('a-circle');
+        circle.setAttribute('color', e.color);
+        circle.setAttribute('opacity', '0.5');
+        circle.setAttribute('radius', '0.5');
+        circle.setAttribute('rotation', '-90 0 0');
+        circle.setAttribute('position', '0 0.01 0');
+
+        entity.appendChild(box);
+        entity.appendChild(text);
+        entity.appendChild(circle);
+        scene.appendChild(entity);
+      });
+    }
+
+    // ═══════════════════════════════════════════════
+    // CONTROL DE MODOS: MAPA / AR
+    // ═══════════════════════════════════════════════
+    let arBuilt = false;
+
+    function setMode(mode) {
+      const mapContainer = document.getElementById('map-container');
+      const arContainer = document.getElementById('ar-container');
+      const arHint = document.getElementById('ar-hint');
+      const gps = document.getElementById('gps-badge');
+
+      document.getElementById('btn-map').classList.toggle('active', mode === 'map');
+      document.getElementById('btn-ar').classList.toggle('active', mode === 'ar');
+
+      if (mode === 'map') {
+        mapContainer.style.display = 'block';
+        arContainer.style.display = 'none';
+        arHint.style.display = 'none';
+        gps.style.display = 'block';
+        setTimeout(() => map.invalidateSize(), 100);
+
+      } else {
+        mapContainer.style.display = 'none';
+        arContainer.style.display = 'block';
+        arHint.style.display = 'block';
+        gps.style.display = 'none';
+        closePanel();
+
+        // Construir marcadores AR solo la primera vez
+        if (!arBuilt) {
+          const scene = document.querySelector('a-scene');
+          if (scene.hasLoaded) {
+            buildARMarkers();
+            arBuilt = true;
+          } else {
+            scene.addEventListener('loaded', () => {
+              buildARMarkers();
+              arBuilt = true;
+            });
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
