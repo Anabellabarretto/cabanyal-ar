@@ -7,8 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <!-- A-Frame loaded lazily on AR activation -->
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#fff;height:100vh;overflow:hidden;}
@@ -271,13 +270,7 @@
 
 <div id="map-container"><div id="map"></div></div>
 
-<div id="ar-container">
-  <a-scene vr-mode-ui="enabled:false"
-    arjs="sourceType:webcam; videoTexture:true; debugUIEnabled:false; trackingMethod:best;"
-    renderer="antialias:true; alpha:true" embedded>
-    <a-camera gps-camera rotation-reader></a-camera>
-  </a-scene>
-</div>
+<div id="ar-container"></div>
 
 <!-- PANEL INFO -->
 <div id="info-panel">
@@ -578,160 +571,74 @@ function buildAR(){
     const ent=document.createElement('a-entity');
     ent.setAttribute('gps-entity-place',`latitude:${e.lat}; longitude:${e.lng}`);
     ent.setAttribute('look-at','[gps-camera]');ent.setAttribute('scale','15 15 15');
-    const bg=document.createElement('a-box');
-    bg.setAttribute('color',e.color);bg.setAttribute('opacity','0.88');
-    bg.setAttribute('width','6');bg.setAttribute('height','1.4');bg.setAttribute('depth','0.12');bg.setAttribute('position','0 1.5 -0.06');
-    const tx=document.createElement('a-text');
-    tx.setAttribute('value',`${e.emoji} ${e.nombre}\n${e.tipo}`);
-    tx.setAttribute('color','white');tx.setAttribute('align','center');tx.setAttribute('width','5.5');tx.setAttribute('position','0 1.5 0');
-    const ci=document.createElement('a-circle');
-    ci.setAttribute('color',e.color);ci.setAttribute('opacity','0.5');ci.setAttribute('radius','0.4');ci.setAttribute('rotation','-90 0 0');ci.setAttribute('position','0 0.01 0');
-    ent.appendChild(bg);ent.appendChild(tx);ent.appendChild(ci);scene.appendChild(ent);
+    const bg=document.createElement('a-box// AR — lazy loading (cámara solo se activa al pulsar botón AR)
+let arBuilt = false;
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
   });
 }
-// ═══════════════════════════════
-// ROUTING + NAVEGACIÓN EN TIEMPO REAL
-// ═══════════════════════════════
-let routeLayer  = null;
-let currentDest = null;
-let travelMode  = 'foot';
-let navActive   = false;
-let compassOn   = false;
 
-function setTravel(mode, btn) {
-  travelMode = mode;
-  document.querySelectorAll('.travel-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
+async function launchAR() {
+  const container = document.getElementById('ar-container');
+  container.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#60a5fa;font-size:14px;font-weight:600;">⏳ Cargando cámara AR…</div>';
 
-function routeTo() {
-  if (!currentDest) return;
-  closePanel();
-  if (!userM) { flashMsg('⚠️ Activa el GPS para calcular la ruta', '#d97706'); return; }
-  flashMsg('⏳ Calculando ruta…', '#60a5fa');
-
-  const origin = userM.getLatLng();
-  const url = `https://router.project-osrm.org/route/v1/${travelMode}/`
-    + `${origin.lng},${origin.lat};${currentDest.lng},${currentDest.lat}`
-    + `?overview=full&geometries=geojson`;
-
-  fetch(url).then(r=>r.json()).then(data => {
-    if (!data.routes?.length) { flashMsg('❌ No se pudo calcular la ruta','#ef4444'); return; }
-    if (routeLayer) map.removeLayer(routeLayer);
-
-    const coords = data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
-    const dist   = (data.routes[0].distance/1000).toFixed(2);
-    const mins   = Math.ceil(data.routes[0].duration/60);
-    const icon   = travelMode==='foot' ? '🚶' : '🚗';
-
-    routeLayer = L.polyline(coords,{
-      color:'#22d3ee', weight:6, opacity:0.9,
-      lineCap:'round', lineJoin:'round'
-    }).addTo(map);
-
-    // Borde más oscuro debajo
-    L.polyline(coords,{
-      color:'#0e7490', weight:10, opacity:0.4,
-      lineCap:'round', lineJoin:'round'
-    }).addTo(map).bringToBack();
-
-    map.fitBounds(routeLayer.getBounds(),{padding:[70,70]});
-
-    // Activar modo navegación — el mapa sigue al usuario
-    navActive = true;
-    const badge = document.getElementById('nav-badge');
-    document.getElementById('nav-text').textContent = `${icon} ${mins} min · ${dist} km`;
-    badge.style.display = 'flex';
-  }).catch(()=>flashMsg('❌ Error de conexión','#ef4444'));
-}
-
-function stopNav() {
-  navActive = false;
-  document.getElementById('nav-badge').style.display = 'none';
-  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
-  // quitar borde oscuro
-  map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
-}
-
-function flashMsg(text, color) {
-  const prev = document.getElementById('flash-msg');
-  if (prev) prev.remove();
-  const d = document.createElement('div');
-  d.id='flash-msg';
-  d.style.cssText=`position:fixed;bottom:56px;left:50%;transform:translateX(-50%);
-    z-index:700;background:rgba(10,15,28,.96);border:1.5px solid ${color};
-    border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;
-    color:${color};white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5);`;
-  d.textContent=text;
-  document.body.appendChild(d);
-  setTimeout(()=>d.remove(),3000);
-}
-
-// ═══════════════════════════════
-// BRÚJULA — girar el mapa
-// ═══════════════════════════════
-function toggleCompass() {
-  compassOn = !compassOn;
-  const btn = document.getElementById('compass-btn');
-  btn.classList.toggle('active', compassOn);
-
-  if (compassOn) {
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-      // iOS 13+
-      DeviceOrientationEvent.requestPermission()
-        .then(r => { if (r==='granted') startCompass(); else { compassOn=false; btn.classList.remove('active'); } })
-        .catch(() => { compassOn=false; btn.classList.remove('active'); });
-    } else {
-      startCompass();
+  try {
+    if (!window.AFRAME) {
+      await loadScript('https://aframe.io/releases/1.4.0/aframe.min.js');
+      await loadScript('https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js');
     }
-  } else {
-    stopCompass();
+  } catch(e) {
+    container.innerHTML = '<div style="padding:20px;color:#ef4444;text-align:center;font-size:13px">❌ Error cargando AR.<br>Comprueba la conexión e inténtalo de nuevo.</div>';
+    return;
   }
+
+  container.innerHTML = '';
+  const scene = document.createElement('a-scene');
+  scene.setAttribute('vr-mode-ui','enabled:false');
+  scene.setAttribute('arjs','sourceType:webcam; videoTexture:true; debugUIEnabled:false; trackingMethod:best;');
+  scene.setAttribute('renderer','antialias:true; alpha:true');
+  scene.setAttribute('embedded','');
+  const cam = document.createElement('a-camera');
+  cam.setAttribute('gps-camera','');
+  cam.setAttribute('rotation-reader','');
+  scene.appendChild(cam);
+  container.appendChild(scene);
+
+  const addMarkers = () => {
+    EQ.forEach(e => {
+      const ent = document.createElement('a-entity');
+      ent.setAttribute('gps-entity-place',`latitude:${e.lat}; longitude:${e.lng}`);
+      ent.setAttribute('look-at','[gps-camera]'); ent.setAttribute('scale','15 15 15');
+      const bg = document.createElement('a-box');
+      bg.setAttribute('color',e.color); bg.setAttribute('opacity','0.88');
+      bg.setAttribute('width','6'); bg.setAttribute('height','1.4');
+      bg.setAttribute('depth','0.12'); bg.setAttribute('position','0 1.5 -0.06');
+      const tx = document.createElement('a-text');
+      tx.setAttribute('value',`${e.emoji} ${e.nombre}\n${e.tipo}`);
+      tx.setAttribute('color','white'); tx.setAttribute('align','center');
+      tx.setAttribute('width','5.5'); tx.setAttribute('position','0 1.5 0');
+      const ci = document.createElement('a-circle');
+      ci.setAttribute('color',e.color); ci.setAttribute('opacity','0.5');
+      ci.setAttribute('radius','0.4'); ci.setAttribute('rotation','-90 0 0');
+      ci.setAttribute('position','0 0.01 0');
+      ent.appendChild(bg); ent.appendChild(tx); ent.appendChild(ci);
+      scene.appendChild(ent);
+    });
+    arBuilt = true;
+  };
+
+  scene.hasLoaded ? addMarkers() : scene.addEventListener('loaded', addMarkers);
 }
 
-function startCompass() {
-  window.addEventListener('deviceorientationabsolute', onOrientation, true);
-  window.addEventListener('deviceorientation', onOrientation, true);
-}
-function stopCompass() {
-  window.removeEventListener('deviceorientationabsolute', onOrientation, true);
-  window.removeEventListener('deviceorientation', onOrientation, true);
-  map.setBearing(0);
-  document.getElementById('compass-needle').style.transform = 'rotate(0deg)';
-}
-function onOrientation(e) {
-  let heading = e.webkitCompassHeading || (e.alpha ? (360 - e.alpha) : null);
-  if (heading === null) return;
-  // Use plugin if available, else CSS fallback on map pane
-  if (typeof map.setBearing === 'function') {
-    map.setBearing(heading);
-  } else {
-    // CSS fallback: rotate all map panes
-    const panes = document.querySelector('.leaflet-map-pane');
-    if (panes) {
-      const cx = map.getSize().x / 2;
-      const cy = map.getSize().y / 2;
-      panes.style.transformOrigin = `${cx}px ${cy}px`;
-      panes.style.transform = `rotate(${heading}deg)`;
-    }
-  }
-  document.getElementById('compass-needle').style.transform = `rotate(${heading}deg)`;
-}
-
-function setMode(mode){
-  document.getElementById('btn-map').classList.toggle('active',mode==='map');
-  document.getElementById('btn-ar').classList.toggle('active',mode==='ar');
-  document.getElementById('map-container').style.display=mode==='map'?'block':'none';
-  document.getElementById('ar-container').style.display=mode==='ar'?'block':'none';
-  document.getElementById('ar-hint').style.display=mode==='ar'?'block':'none';
+yId('ar-hint').style.display=mode==='ar'?'block':'none';
   document.getElementById('gps-badge').style.display=mode==='map'?'block':'none';
   document.getElementById('search-bar').style.display=mode==='map'?'block':'none';
   if(mode==='map'){closePanel();setTimeout(()=>map.invalidateSize(),100);}
-  else if(!arBuilt){
-    const sc=document.querySelector('a-scene');
-    sc.hasLoaded?(buildAR(),arBuilt=true):sc.addEventListener('loaded',()=>{buildAR();arBuilt=true;});
-  }
+  else if(!arBuilt){ launchAR(); }
 }
 </script>
 </body>
