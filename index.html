@@ -1,519 +1,710 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
   <title>Cabanyal en Red</title>
-
-  <!-- Leaflet (mapa interactivo) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- AR.js + A-Frame (realidad aumentada geolocada) -->
+  <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#fff;height:100vh;overflow:hidden;}
 
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #0f172a;
-      color: #fff;
-      height: 100vh;
-      overflow: hidden;
+    /* HEADER */
+    #header{
+      position:fixed;top:0;left:0;right:0;z-index:1000;
+      background:rgba(15,23,42,0.95);backdrop-filter:blur(10px);
+      padding:10px 16px;display:flex;align-items:center;justify-content:space-between;
+      border-bottom:1px solid rgba(255,255,255,0.07);
+    }
+    #header h1{font-size:15px;font-weight:700;color:#60a5fa;}
+    #header p{font-size:11px;color:#64748b;margin-top:1px;}
+    .mode-btn{
+      padding:6px 16px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.15);
+      font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#94a3b8;
+      transition:all .2s;margin-left:6px;
+    }
+    .mode-btn.active{background:#2563eb;border-color:#2563eb;color:#fff;}
+
+    /* BUSCADOR */
+    #search-bar{
+      position:fixed;top:62px;left:50%;transform:translateX(-50%);
+      z-index:900;width:min(400px,90vw);
+    }
+    #search-wrap{position:relative;}
+    #search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;}
+    #search-input{
+      width:100%;padding:10px 16px 10px 38px;border-radius:12px;
+      border:1.5px solid rgba(255,255,255,0.12);
+      background:rgba(15,23,42,0.94);backdrop-filter:blur(10px);
+      color:#fff;font-size:13px;outline:none;box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    }
+    #search-input::placeholder{color:#64748b;}
+    #search-dropdown{
+      display:none;margin-top:4px;
+      background:rgba(15,23,42,0.98);border:1px solid rgba(255,255,255,0.1);
+      border-radius:12px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.5);
+    }
+    .s-item{
+      padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;
+      transition:background .12s;border-bottom:1px solid rgba(255,255,255,0.04);
+    }
+    .s-item:last-child{border:none;}
+    .s-item:hover{background:rgba(37,99,235,0.2);}
+    .s-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+    .s-name{font-size:13px;font-weight:600;color:#e2e8f0;}
+    .s-tipo{font-size:10px;color:#64748b;}
+
+    #map-container{position:fixed;top:56px;left:0;right:0;bottom:0;z-index:100;}
+    #map{width:100%;height:100%;}
+
+    /* FOTO-CARD */
+    .fcard-wrap{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+    .fcard{
+      background:#fff;border-radius:10px;overflow:hidden;
+      box-shadow:0 4px 16px rgba(0,0,0,0.45);
+      border:2.5px solid #fff;transition:transform .18s;
+    }
+    .fcard:hover{transform:scale(1.06);}
+    .fcard-img{width:100%;object-fit:cover;display:block;}
+    .fcard-img-placeholder{width:100%;display:flex;align-items:center;justify-content:center;background:#1e293b;}
+    .fcard-label{padding:3px 4px;font-weight:700;text-align:center;line-height:1.2;color:#0f172a;border-top:2.5px solid;}
+    .fcard-arrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;}
+
+    #ar-container{display:none;position:fixed;top:56px;left:0;right:0;bottom:0;z-index:200;}
+
+    /* ══ PANEL INFO — diseño artístico ══ */
+    #info-panel{
+      display:none;position:fixed;bottom:0;left:0;right:0;z-index:500;
+      background:#0c1220;
+      border-radius:24px 24px 0 0;
+      box-shadow:0 -8px 40px rgba(0,0,0,0.6);
+      overflow:hidden;
+      max-height:82vh;
+      overflow-y:auto;
     }
 
-    /* ── CABECERA ── */
-    #header {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 1000;
-      background: rgba(15, 23, 42, 0.92);
-      backdrop-filter: blur(8px);
-      padding: 10px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+    /* Imagen hero con gradiente */
+    #panel-hero{
+      position:relative;width:100%;height:160px;overflow:hidden;flex-shrink:0;
+    }
+    #panel-img{
+      width:100%;height:100%;object-fit:cover;display:none;
+    }
+    #panel-fallback{
+      width:100%;height:100%;display:flex;align-items:center;
+      justify-content:center;font-size:56px;
+    }
+    /* Gradiente artístico sobre la imagen */
+    #panel-hero::after{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(
+        to bottom,
+        rgba(12,18,32,0) 0%,
+        rgba(12,18,32,0.4) 50%,
+        rgba(12,18,32,0.95) 100%
+      );
+      pointer-events:none;
+    }
+    /* Barra de color del centro encima del gradiente */
+    #panel-colorbar{
+      position:absolute;top:0;left:0;right:0;height:3px;z-index:2;
+    }
+    /* Tipo badge flotante sobre la imagen */
+    #panel-tipo-badge{
+      position:absolute;bottom:12px;left:16px;z-index:3;
+      font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+      padding:3px 10px;border-radius:20px;
+      background:rgba(255,255,255,0.15);backdrop-filter:blur(6px);
+      border:1px solid rgba(255,255,255,0.2);color:#fff;
+    }
+    #close-panel{
+      position:absolute;top:12px;right:14px;z-index:10;
+      background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);
+      border:1px solid rgba(255,255,255,0.15);
+      color:#fff;font-size:14px;cursor:pointer;border-radius:50%;
+      width:30px;height:30px;display:flex;align-items:center;justify-content:center;
     }
 
-    #header h1 {
-      font-size: 16px;
-      font-weight: 700;
-      color: #60a5fa;
-      letter-spacing: 0.5px;
+    /* Contenido */
+    #panel-content{padding:16px 18px 24px;}
+    #panel-nombre{font-size:18px;font-weight:800;color:#f1f5f9;letter-spacing:-0.3px;margin-bottom:12px;}
+
+    /* Historia */
+    #panel-historia{
+      font-size:15px;color:#e2e8f0;line-height:1.85;
+      margin-bottom:16px;
+      padding:18px 20px;
+      background:linear-gradient(135deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%);
+      border-left:4px solid;
+      border-radius:0 14px 14px 0;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 12px rgba(0,0,0,0.2);
+      font-style:italic;
+      letter-spacing:0.15px;
+      position:relative;
+    }
+    #panel-historia::before{
+      content:'"';
+      position:absolute;top:-10px;left:14px;
+      font-size:64px;font-style:normal;line-height:1;
+      opacity:0.18;font-family:Georgia,serif;
     }
 
-    #header p {
-      font-size: 11px;
-      color: #94a3b8;
-      margin-top: 1px;
+    /* Botones de acción */
+    #panel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+    .pBtn{
+      flex:1;min-width:100px;
+      padding:10px 12px;border-radius:10px;font-size:12px;font-weight:700;
+      text-decoration:none;cursor:pointer;border:none;
+      display:flex;align-items:center;justify-content:center;gap:6px;
+      transition:opacity .15s;
+    }
+    .pBtn:hover{opacity:.85;}
+    .pBtn.primary{background:#2563eb;color:#fff;}
+    .pBtn.secondary{background:rgba(255,255,255,0.07);color:#cbd5e1;border:1px solid rgba(255,255,255,0.1);}
+    .pBtn.maps{background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.25);}
+
+    /* Redes sociales */
+    #panel-social{display:flex;gap:8px;flex-wrap:wrap;}
+    .socialBtn{
+      padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;
+      text-decoration:none;cursor:pointer;border:none;
+      display:flex;align-items:center;gap:6px;transition:opacity .15s;
+    }
+    .socialBtn:hover{opacity:.8;}
+    .socialBtn.ig{background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;}
+    .socialBtn.fb{background:#1877f2;color:#fff;}
+    .socialBtn.web{background:rgba(255,255,255,0.07);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);}
+
+    /* GPS */
+    /* COMPASS BTN */
+    #compass-btn{
+      position:fixed;top:62px;right:14px;z-index:900;
+      width:40px;height:40px;border-radius:50%;
+      background:rgba(15,23,42,0.92);border:1.5px solid rgba(255,255,255,0.15);
+      color:#94a3b8;font-size:18px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 2px 10px rgba(0,0,0,0.3);transition:all .2s;
+    }
+    #compass-btn.active{background:#2563eb;border-color:#2563eb;color:#fff;}
+    #compass-needle{display:inline-block;transition:transform .3s;}
+
+    /* TRAVEL MODE — sub-pills under Cómo llegar */
+    #travel-mode{
+      display:flex;align-items:center;gap:6px;
+      margin-top:6px;padding:8px 10px;
+      background:rgba(255,255,255,0.04);border-radius:10px;
+      border:1px solid rgba(255,255,255,0.07);
+    }
+    #travel-label{font-size:11px;color:#64748b;font-weight:600;white-space:nowrap;}
+    .travel-btn{
+      padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;
+      border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);
+      color:#64748b;cursor:pointer;transition:all .2s;
+      display:flex;align-items:center;gap:4px;
+    }
+    .travel-btn.walk.active{background:rgba(16,185,129,0.2);color:#34d399;border-color:#34d399;}
+    .travel-btn.drive.active{background:rgba(249,115,22,0.2);color:#fb923c;border-color:#fb923c;}
+
+    /* NAV BADGE */
+    #nav-badge{
+      display:none;position:fixed;bottom:56px;left:50%;transform:translateX(-50%);
+      z-index:600;background:rgba(10,15,28,0.96);
+      border-radius:14px;padding:10px 18px;
+      font-size:13px;font-weight:700;color:#22d3ee;
+      box-shadow:0 4px 20px rgba(0,0,0,0.5);
+      border:1.5px solid #22d3ee;
+      display:none;align-items:center;gap:12px;white-space:nowrap;
+    }
+    #nav-badge button{
+      background:rgba(255,255,255,0.1);border:none;color:#22d3ee;
+      font-size:11px;font-weight:700;cursor:pointer;
+      border-radius:6px;padding:3px 9px;
     }
 
-    /* ── BOTONES DE MODO ── */
-    #mode-buttons {
-      display: flex;
-      gap: 6px;
+    #gps-badge{
+      position:fixed;bottom:16px;right:14px;z-index:400;
+      background:rgba(15,23,42,0.9);border:1px solid rgba(255,255,255,0.1);
+      border-radius:8px;padding:6px 10px;font-size:11px;color:#94a3b8;
     }
+    #gps-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;margin-right:5px;vertical-align:middle;}
+    #gps-dot.on{background:#22c55e;animation:pulse 1.5s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
-    .mode-btn {
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 1.5px solid rgba(255,255,255,0.2);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: transparent;
-      color: #94a3b8;
-    }
-
-    .mode-btn.active {
-      background: #2563eb;
-      border-color: #2563eb;
-      color: #fff;
-    }
-
-    /* ── MAPA ── */
-    #map-container {
-      position: fixed;
-      top: 56px; left: 0; right: 0; bottom: 0;
-      z-index: 100;
-    }
-
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* ── AR ── */
-    #ar-container {
-      display: none;
-      position: fixed;
-      top: 56px; left: 0; right: 0; bottom: 0;
-      z-index: 200;
-    }
-
-    #ar-container a-scene {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* ── PANEL DE INFO (mapa) ── */
-    #info-panel {
-      display: none;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      z-index: 500;
-      background: rgba(15, 23, 42, 0.96);
-      backdrop-filter: blur(12px);
-      border-top: 1px solid rgba(255,255,255,0.1);
-      padding: 16px;
-      max-height: 220px;
-      border-radius: 16px 16px 0 0;
-    }
-
-    #info-panel h2 {
-      font-size: 15px;
-      font-weight: 700;
-      color: #60a5fa;
-      margin-bottom: 4px;
-    }
-
-    #info-panel .tipo {
-      font-size: 11px;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-    }
-
-    #info-panel p {
-      font-size: 13px;
-      color: #cbd5e1;
-      line-height: 1.5;
-      margin-bottom: 10px;
-    }
-
-    #info-links {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .link-btn {
-      padding: 7px 14px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      text-decoration: none;
-      cursor: pointer;
-      border: none;
-    }
-
-    .link-btn.primary { background: #2563eb; color: #fff; }
-    .link-btn.secondary { background: rgba(255,255,255,0.1); color: #cbd5e1; }
-
-    #close-panel {
-      position: absolute;
-      top: 12px; right: 14px;
-      background: none;
-      border: none;
-      color: #94a3b8;
-      font-size: 18px;
-      cursor: pointer;
-    }
-
-    /* ── AVISO AR ── */
-    #ar-hint {
-      display: none;
-      position: fixed;
-      bottom: 20px; left: 50%;
-      transform: translateX(-50%);
-      z-index: 600;
-      background: rgba(15,23,42,0.88);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 12px;
-      padding: 10px 18px;
-      font-size: 12px;
-      color: #94a3b8;
-      text-align: center;
-      max-width: 280px;
-    }
-
-    /* ── BADGE DE POSICIÓN ── */
-    #gps-badge {
-      position: fixed;
-      bottom: 80px; right: 14px;
-      z-index: 400;
-      background: rgba(15,23,42,0.88);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px;
-      padding: 6px 10px;
-      font-size: 11px;
-      color: #94a3b8;
-    }
-
-    #gps-dot {
-      display: inline-block;
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: #ef4444;
-      margin-right: 5px;
-      vertical-align: middle;
-    }
-
-    #gps-dot.active { background: #22c55e; animation: pulse 1.5s infinite; }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+    #ar-hint{
+      display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+      z-index:600;background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.12);
+      border-radius:12px;padding:10px 18px;font-size:12px;color:#94a3b8;
+      text-align:center;max-width:290px;
     }
   </style>
 </head>
-
 <body>
 
-  <!-- CABECERA -->
-  <div id="header">
-    <div>
-      <h1>Cabanyal en Red</h1>
-      <p>Oferta cultural del barrio</p>
+<div id="header">
+  <div><h1>Cabanyal en Red</h1><p>Oferta cultural del barrio</p></div>
+  <div>
+    <button class="mode-btn active" id="btn-map" onclick="setMode('map')">🗺 Mapa</button>
+    <button class="mode-btn" id="btn-ar" onclick="setMode('ar')">📷 AR</button>
+  </div>
+</div>
+
+<div id="search-bar">
+  <div id="search-wrap">
+    <span id="search-icon">🔍</span>
+    <input id="search-input" type="text" placeholder="Buscar centro cultural…" autocomplete="off"
+      oninput="filterSearch(this.value)" onfocus="showDD()" onblur="hideDD()"/>
+  </div>
+  <div id="search-dropdown"></div>
+</div>
+
+<div id="map-container"><div id="map"></div></div>
+
+<div id="ar-container">
+  <a-scene vr-mode-ui="enabled:false"
+    arjs="sourceType:webcam; videoTexture:true; debugUIEnabled:false; trackingMethod:best;"
+    renderer="antialias:true; alpha:true" embedded>
+    <a-camera gps-camera rotation-reader></a-camera>
+  </a-scene>
+</div>
+
+<!-- PANEL INFO -->
+<div id="info-panel">
+  <button id="close-panel" onclick="closePanel()">✕</button>
+  <div id="panel-hero">
+    <img id="panel-img" src="" alt=""/>
+    <div id="panel-fallback"></div>
+    <div id="panel-colorbar"></div>
+    <div id="panel-tipo-badge"></div>
+  </div>
+  <div id="panel-content">
+    <div id="panel-nombre"></div>
+    <div id="panel-historia"></div>
+    <div id="panel-actions">
+      <a class="pBtn primary" id="panel-web" href="#" target="_blank">🎭 Ver programación</a>
+      <button class="pBtn maps" id="panel-maps" onclick="routeTo()">📍 Cómo llegar</button>
     </div>
-    <div id="mode-buttons">
-      <button class="mode-btn active" id="btn-map" onclick="setMode('map')">🗺 Mapa</button>
-      <button class="mode-btn" id="btn-ar" onclick="setMode('ar')">📷 AR</button>
+    <div id="travel-mode">
+      <span id="travel-label">Modo:</span>
+      <button class="travel-btn walk active" id="btn-walk" onclick="setTravel('foot',this)">🚶 A pie</button>
+      <button class="travel-btn drive" id="btn-drive" onclick="setTravel('driving',this)">🚗 En coche</button>
     </div>
+    <div id="panel-social"></div>
   </div>
+</div>
 
-  <!-- MAPA -->
-  <div id="map-container">
-    <div id="map"></div>
-  </div>
+<button id="compass-btn" onclick="toggleCompass()" title="Girar mapa con brújula">
+  <span id="compass-needle">🧭</span>
+</button>
+<div id="nav-badge"><span id="nav-text"></span><button onclick="stopNav()">✕ Parar</button></div>
+<div id="gps-badge"><span id="gps-dot"></span><span id="gps-text">Buscando GPS…</span></div>
+<div id="ar-hint">📍 Apunta el móvil hacia la calle — los espacios aparecerán en la dirección correcta</div>
 
-  <!-- AR -->
-  <div id="ar-container">
-    <a-scene
-      vr-mode-ui="enabled: false"
-      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false; trackingMethod: best;"
-      renderer="antialias: true; alpha: true"
-      embedded>
+<script>
+// ═══════════════════════════════════════════════════
+// DATOS  — añade tus fotos en img: y redes en social:
+// ═══════════════════════════════════════════════════
+const EQ = [
+  {
+    id:1, nombre:"Centre Cultural Reina 121",
+    tipo:"Centro cultural municipal",
+    lat:39.4697, lng:-0.3267, color:"#2563eb", emoji:"🏛️",
+    img:"fotos/reina121.jpg",
+    historia:"La Reina 121 ocupa tres casas antiguas del Cabanyal cosidas entre sí y devueltas al barrio tras años de abandono. Su nombre es el número de la calle — nada más, nada menos — un gesto de austeridad que dice mucho de su filosofía: pertenecer al barrio, no imponerse sobre él. Coprogramada con más de cuarenta colectivos locales, cada semana acoge desde talleres de cerámica hasta presentaciones de fanzines, pasando por conciertos acústicos en el patio interior. Es el tipo de espacio que no existía aquí hace cinco años.",
+    web:"https://cultural.valencia.es/es/espais/centro-cultural-reina-121/",
+    instagram:"https://www.instagram.com/reina121_cabanyal",
+    facebook:""
+  },
+  {
+    id:2, nombre:"Centre Cultural Escorxador",
+    tipo:"Centro cultural municipal",
+    lat:39.4700, lng:-0.3255, color:"#7c3aed", emoji:"🏚️",
+    img:"fotos/escorxador.jpg",
+    historia:"En 1910 este edificio abría como matadero municipal del Cabanyal. Las reses entraban por Carrer Sant Pere, el barrio marino olía a sal y a sangre, y nadie imaginaba que un siglo después las mismas paredes albergarían exposiciones fotográficas sobre las mujeres de la Semana Santa Marinera. La rehabilitación conservó la estructura de ladrillo visto y las cubiertas originales. Hoy el Escorxador programa su historia como si fuese material artístico: la memoria del barrio es el centro de cada ciclo, de cada residencia, de cada taller.",
+    web:"https://cultural.valencia.es/es/espais/centro-cultural-escorxador/",
+    instagram:"https://www.instagram.com/ccescorxador",
+    facebook:""
+  },
+  {
+    id:3, nombre:"Teatro La Estrella",
+    tipo:"Teatro",
+    lat:39.4703, lng:-0.3280, color:"#dc2626", emoji:"🎭",
+    img:"fotos/teatro.png",
+    historia:"El Teatro La Estrella lleva décadas siendo el salón de actos del Cabanyal cuando el Cabanyal todavía no estaba de moda. Nació como espacio de entretenimiento popular para las familias marineras del barrio — varietés, zarzuela, cine de verano — y sobrevivió a la especulación, al abandono y a la pandemia. Hoy mantiene una programación ecléctica que mezcla teatro infantil, compañías emergentes valencianas y noches de spoken word. Es el tipo de teatro que no pide al público que se comporte.",
+    web:"https://www.teatrolaestrella.es",
+    instagram:"https://www.instagram.com/teatrolaestrella",
+    facebook:"https://www.facebook.com/teatrolaestrella"
+  },
+  {
+    id:4, nombre:"Biblioteca Pública Cabanyal",
+    tipo:"Biblioteca",
+    lat:39.4688, lng:-0.3272, color:"#059669", emoji:"📚",
+    img:"fotos/biblioteca.jpg",
+    historia:"Las bibliotecas de barrio tienen algo que los grandes equipamientos culturales no pueden imitar: el vecino que llega con el periódico bajo el brazo, los niños que hacen los deberes en la misma mesa que los jubilados que leen novelas. La Biblioteca del Cabanyal lleva años siendo ese tercer lugar — ni casa ni trabajo — donde el barrio se encuentra sin necesidad de consumir nada. Su fondo incluye una colección específica sobre la historia del Cabanyal-Canyamelar, con documentos, fotografías y publicaciones locales difíciles de encontrar en otro sitio.",
+    web:"https://bibliotecas.valencia.es",
+    instagram:"",
+    facebook:""
+  },
+  {
+    id:5, nombre:"Hub Cultural Cabanyal",
+    tipo:"Red de agentes culturales",
+    lat:39.4693, lng:-0.3260, color:"#d97706", emoji:"🌐",
+    img:"fotos/hub.jpg",
+    historia:"El Hub Cultural Cabanyal no es un edificio: es una red. Nació en 2024 de la Mesa TAC, un foro informal donde más de sesenta agentes culturales del Distrito Marítimo — artistas, gestores, colectivos, empresas creativas — se reunían para no repetirse. Lo que detectaron fue una paradoja: el barrio con más vida cultural de Valencia era también el barrio cuyos espacios menos se conocían entre sí. El Hub existe para resolver eso. Su plataforma digital conecta programaciones, facilita colaboraciones y devuelve visibilidad a todo el ecosistema.",
+    web:"https://www.pro21cultural.com/hub-cultural-cabanyal-2/",
+    instagram:"https://www.instagram.com/hubculturalcabanyal",
+    facebook:""
+  },
+  {
+    id:6, nombre:"Mercat del Cabanyal",
+    tipo:"Patrimonio y espacio cultural",
+    lat:39.4680, lng:-0.3285, color:"#0891b2", emoji:"🏪",
+    img:"fotos/mercat.jpg",
+    historia:"El Mercat del Cabanyal abrió en 1952 para dar servicio a un barrio que vivía de la pesca y que se organizaba al ritmo de las mareas. Los martes y jueves eran los días del pescado fresco — la lonja descargaba al amanecer y el mercado se llenaba antes de que el sol calentara. Hoy el mercado ha sobrevivido a los supermercados y a la pandemia con una mezcla de puestos tradicionales y nuevos vendedores de producto local. Los sábados por la mañana sigue siendo el mejor lugar del barrio para escuchar valenciano sin buscarlo.",
+    web:"https://www.mercadosmunicipales.es",
+    instagram:"https://www.instagram.com/mercatdelcabanyal",
+    facebook:"https://www.facebook.com/mercatcabanyal"
+  },
+];
 
-      <!-- Cámara con GPS -->
-      <a-camera gps-camera rotation-reader></a-camera>
+// ═══════════════════════════════
+// MAPA
+// ═══════════════════════════════
+const map = L.map('map',{zoomControl:true, rotate:true, bearing:0}).setView([39.4693,-0.3270],16);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {attribution:'© OpenStreetMap contributors'}).addTo(map);
 
-      <!-- Los marcadores AR se generan dinámicamente por JS -->
+// Polígono barrio (límite este = Passeig Marítim, no entra en el mar)
+L.polygon([
+  [39.4745,-0.3325],[39.4745,-0.3295],[39.4730,-0.3240],
+  [39.4710,-0.3228],[39.4685,-0.3222],[39.4660,-0.3228],
+  [39.4645,-0.3248],[39.4638,-0.3278],[39.4645,-0.3315],
+  [39.4668,-0.3332],[39.4700,-0.3335],[39.4725,-0.3330],[39.4745,-0.3325]
+],{
+  color:'#6366f1', weight:1, opacity:0.35,
+  fillColor:'#818cf8', fillOpacity:0.13,
+  dashArray:null
+}).addTo(map);
 
-    </a-scene>
-  </div>
+// Label barrio
+L.marker([39.4738,-0.3322],{
+  icon:L.divIcon({
+    className:'',iconSize:[170,30],iconAnchor:[0,15],
+    html:`<div style="
+      background:#1e3a8a;
+      border:2px solid #60a5fa;
+      border-radius:8px;
+      padding:6px 14px;
+      font-size:13px;
+      font-weight:800;
+      color:#ffffff;
+      letter-spacing:0.6px;
+      white-space:nowrap;
+      text-align:center;
+      pointer-events:none;
+      box-shadow:0 2px 12px rgba(0,0,0,0.5);
+      text-shadow:0 1px 4px rgba(0,0,0,0.6);
+    ">Cabanyal-Canyamelar</div>`
+  }),interactive:false,zIndexOffset:-1000
+}).addTo(map);
 
-  <!-- PANEL DE INFO (mapa) -->
-  <div id="info-panel">
-    <button id="close-panel" onclick="closePanel()">✕</button>
-    <h2 id="panel-nombre"></h2>
-    <div class="tipo" id="panel-tipo"></div>
-    <p id="panel-desc"></p>
-    <div id="info-links">
-      <a class="link-btn primary" id="panel-web" href="#" target="_blank">Ver programación</a>
-      <a class="link-btn secondary" id="panel-maps" href="#" target="_blank">Cómo llegar</a>
-    </div>
-  </div>
+// Icono persona
+const personIcon = L.divIcon({
+  className:'',iconSize:[36,36],iconAnchor:[18,36],
+  html:`<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+    <circle cx="18" cy="18" r="17" fill="#2563eb" opacity="0.2"/>
+    <circle cx="18" cy="12" r="6" fill="#1d4ed8"/>
+    <path d="M4 34c0-7.7 6.3-14 14-14s14 6.3 14 14" fill="#1d4ed8"/>
+    <circle cx="18" cy="12" r="5" fill="#fff"/>
+    <path d="M7 34c0-6.1 4.9-11 11-11s11 4.9 11 11" fill="#fff"/>
+  </svg>`
+});
 
-  <!-- AVISO AR -->
-  <div id="ar-hint">
-    📍 Apunta el móvil hacia la calle — los espacios culturales aparecerán flotando en la dirección correcta
-  </div>
+// Tamaño dinámico según zoom
+function cardSize(z){
+  if(z<=14)return{w:32,h:22,font:6,arr:6};
+  if(z===15)return{w:48,h:32,font:7,arr:7};
+  if(z===16)return{w:62,h:42,font:8,arr:8};
+  if(z===17)return{w:78,h:52,font:9,arr:9};
+  return{w:90,h:60,font:9,arr:10};
+}
 
-  <!-- BADGE GPS -->
-  <div id="gps-badge">
-    <span id="gps-dot"></span>
-    <span id="gps-text">Buscando GPS…</span>
-  </div>
+function makeCard(e,zoom){
+  const s=cardSize(zoom);
+  const img=e.img
+    ?`<img class="fcard-img" src="${e.img}" style="height:${s.h}px"
+        onerror="this.outerHTML='<div class=fcard-img-placeholder style=height:${s.h}px;font-size:${Math.round(s.h*.4)}px>${e.emoji}</div>'">`
+    :`<div class="fcard-img-placeholder" style="height:${s.h}px;font-size:${Math.round(s.h*.4)}px">${e.emoji}</div>`;
+  const label=zoom>=15
+    ?`<div class="fcard-label" style="font-size:${s.font}px;border-color:${e.color};color:${e.color}">
+        ${e.nombre.length>16?e.nombre.slice(0,14)+'…':e.nombre}</div>`:'';
+  return`<div class="fcard-wrap">
+    <div class="fcard" style="width:${s.w}px;border-color:${e.color}">${img}${label}</div>
+    <div class="fcard-arrow" style="border-left:${Math.round(s.w*.08)}px solid transparent;
+      border-right:${Math.round(s.w*.08)}px solid transparent;
+      border-top:${s.arr}px solid ${e.color}"></div>
+  </div>`;
+}
 
-  <script>
-    // ═══════════════════════════════════════════════
-    // DATOS DE EQUIPAMIENTOS CULTURALES DEL CABANYAL
-    // ⚠️ Verifica y actualiza las coordenadas y URLs
-    //    antes de mostrar el prototipo
-    // ═══════════════════════════════════════════════
-    const equipamientos = [
-      {
-        id: 1,
-        nombre: "Centre Cultural Reina 121",
-        tipo: "Centro cultural municipal",
-        desc: "Centro de proximidad coprogramado con las entidades y asociaciones del barrio. Talleres, exposiciones y actividades culturales.",
-        lat: 39.4697,
-        lng: -0.3267,
-        web: "https://cultural.valencia.es/es/espais/centro-cultural-reina-121/",
-        color: "#2563eb"
-      },
-      {
-        id: 2,
-        nombre: "Centre Cultural Escorxador",
-        tipo: "Centro cultural municipal",
-        desc: "Ubicado en el antiguo matadero del barrio (1910), rehabilitado como espacio cultural. Programación vinculada a la memoria del Cabanyal.",
-        lat: 39.4700,
-        lng: -0.3255,
-        web: "https://cultural.valencia.es/es/espais/centro-cultural-escorxador/",
-        color: "#7c3aed"
-      },
-      {
-        id: 3,
-        nombre: "Teatro La Estrella",
-        tipo: "Teatro",
-        desc: "Teatro de barrio con larga tradición en el Cabanyal. Programación de artes escénicas, teatro familiar y espectáculos locales.",
-        lat: 39.4703,
-        lng: -0.3280,
-        web: "https://www.teatrolaestrella.es",
-        color: "#dc2626"
-      },
-      {
-        id: 4,
-        nombre: "Biblioteca Pública Cabanyal",
-        tipo: "Biblioteca",
-        desc: "Biblioteca pública de proximidad con fondo bibliográfico, hemeroteca y programación de actividades culturales para todos los públicos.",
-        lat: 39.4688,
-        lng: -0.3272,
-        web: "https://bibliotecas.valencia.es",
-        color: "#059669"
-      },
-      {
-        id: 5,
-        nombre: "Hub Cultural Cabanyal",
-        tipo: "Red de agentes culturales",
-        desc: "Plataforma que conecta más de 60 agentes culturales del Distrito Marítimo. Punto de referencia para la programación cultural del barrio.",
-        lat: 39.4693,
-        lng: -0.3260,
-        web: "https://www.pro21cultural.com/hub-cultural-cabanyal-2/",
-        color: "#d97706"
-      },
-      {
-        id: 6,
-        nombre: "Mercado del Cabanyal",
-        tipo: "Patrimonio y espacio cultural",
-        desc: "Mercado histórico del barrio, espacio de referencia identitaria y cultural de la comunidad marinera del Cabanyal-Canyamelar.",
-        lat: 39.4680,
-        lng: -0.3285,
-        web: "https://www.mercadosmunicipales.es",
-        color: "#0891b2"
-      }
-    ];
+let lMarkers={};
+function buildMarkers(){
+  const zoom=map.getZoom(); const s=cardSize(zoom);
+  Object.values(lMarkers).forEach(m=>map.removeLayer(m)); lMarkers={};
+  EQ.forEach(e=>{
+    const icon=L.divIcon({className:'',iconSize:[s.w,s.h+20],iconAnchor:[s.w/2,s.h+20],html:makeCard(e,zoom)});
+    const m=L.marker([e.lat,e.lng],{icon}).addTo(map);
+    m.on('click',()=>openPanel(e)); lMarkers[e.id]=m;
+  });
+}
+buildMarkers();
+map.on('zoomend',buildMarkers);
 
-    // ═══════════════════════════════════════════════
-    // MAPA CON LEAFLET
-    // ═══════════════════════════════════════════════
-    const map = L.map('map', { zoomControl: true }).setView([39.4693, -0.3270], 16);
+// ── Panel info ──
+function openPanel(e){
+  // Imagen
+  const img=document.getElementById('panel-img');
+  const fb=document.getElementById('panel-fallback');
+  if(e.img){
+    img.src=e.img;img.style.display='block';fb.style.display='none';
+    img.onerror=()=>{img.style.display='none';fb.style.display='flex';fb.textContent=e.emoji;fb.style.background=e.color+'33';};
+  }else{
+    img.style.display='none';fb.style.display='flex';fb.textContent=e.emoji;fb.style.background=e.color+'33';
+  }
+  // Metadatos
+  document.getElementById('panel-colorbar').style.background=e.color;
+  document.getElementById('panel-tipo-badge').textContent=e.tipo;
+  document.getElementById('panel-nombre').textContent=e.nombre;
+  document.getElementById('panel-historia').style.borderColor=e.color;
+  document.getElementById('panel-historia').textContent=e.historia;
+  document.getElementById('panel-web').href=e.web;
+  currentDest = L.latLng(e.lat, e.lng);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+  // Redes sociales
+  const social=document.getElementById('panel-social');
+  social.innerHTML='';
+  if(e.instagram){
+    const a=document.createElement('a');
+    a.className='socialBtn ig';a.href=e.instagram;a.target='_blank';
+    a.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg> Instagram';
+    social.appendChild(a);
+  }
+  if(e.facebook){
+    const a=document.createElement('a');
+    a.className='socialBtn fb';a.href=e.facebook;a.target='_blank';
+    a.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Facebook';
+    social.appendChild(a);
+  }
+
+  document.getElementById('info-panel').style.display='block';
+  map.panTo([e.lat,e.lng]);
+}
+function closePanel(){document.getElementById('info-panel').style.display='none';}
+
+// GPS
+let userM=null;
+navigator.geolocation&&navigator.geolocation.watchPosition(pos=>{
+  const{latitude:la,longitude:ln,accuracy:ac}=pos.coords;
+  if (userM) {
+    userM.setLatLng([la,ln]);
+    // Si navegación activa, seguir al usuario
+    if (navActive) map.panTo([la,ln], {animate:true, duration:0.5});
+  } else {
+    userM = L.marker([la,ln],{icon:personIcon,zIndexOffset:9999}).addTo(map);
+    map.setView([la,ln],17);
+  }
+  document.getElementById('gps-dot').classList.add('on');
+  document.getElementById('gps-text').textContent=`GPS activo (±${Math.round(ac)}m)`;
+},()=>{document.getElementById('gps-text').textContent='GPS no disponible';},
+{enableHighAccuracy:true,maximumAge:2000,timeout:10000});
+
+// BUSCADOR
+function renderDD(items){
+  const dd=document.getElementById('search-dropdown');
+  if(!items.length){dd.style.display='none';return;}
+  dd.innerHTML=items.map(e=>`
+    <div class="s-item" onmousedown="selectEQ(${e.id})">
+      <div class="s-dot" style="background:${e.color}"></div>
+      <div><div class="s-name">${e.nombre}</div><div class="s-tipo">${e.tipo}</div></div>
+    </div>`).join('');
+  dd.style.display='block';
+}
+function filterSearch(v){const q=v.toLowerCase().trim();renderDD(q?EQ.filter(e=>e.nombre.toLowerCase().includes(q)||e.tipo.toLowerCase().includes(q)):EQ);}
+function showDD(){renderDD(EQ);}
+function hideDD(){setTimeout(()=>{document.getElementById('search-dropdown').style.display='none';},180);}
+function selectEQ(id){
+  const e=EQ.find(x=>x.id===id);if(!e)return;
+  document.getElementById('search-input').value=e.nombre;
+  document.getElementById('search-dropdown').style.display='none';
+  map.setView([e.lat,e.lng],18,{animate:true});
+  setTimeout(()=>openPanel(e),400);
+}
+
+// AR
+let arBuilt=false;
+function buildAR(){
+  const scene=document.querySelector('a-scene');
+  EQ.forEach(e=>{
+    const ent=document.createElement('a-entity');
+    ent.setAttribute('gps-entity-place',`latitude:${e.lat}; longitude:${e.lng}`);
+    ent.setAttribute('look-at','[gps-camera]');ent.setAttribute('scale','15 15 15');
+    const bg=document.createElement('a-box');
+    bg.setAttribute('color',e.color);bg.setAttribute('opacity','0.88');
+    bg.setAttribute('width','6');bg.setAttribute('height','1.4');bg.setAttribute('depth','0.12');bg.setAttribute('position','0 1.5 -0.06');
+    const tx=document.createElement('a-text');
+    tx.setAttribute('value',`${e.emoji} ${e.nombre}\n${e.tipo}`);
+    tx.setAttribute('color','white');tx.setAttribute('align','center');tx.setAttribute('width','5.5');tx.setAttribute('position','0 1.5 0');
+    const ci=document.createElement('a-circle');
+    ci.setAttribute('color',e.color);ci.setAttribute('opacity','0.5');ci.setAttribute('radius','0.4');ci.setAttribute('rotation','-90 0 0');ci.setAttribute('position','0 0.01 0');
+    ent.appendChild(bg);ent.appendChild(tx);ent.appendChild(ci);scene.appendChild(ent);
+  });
+}
+// ═══════════════════════════════
+// ROUTING + NAVEGACIÓN EN TIEMPO REAL
+// ═══════════════════════════════
+let routeLayer  = null;
+let currentDest = null;
+let travelMode  = 'foot';
+let navActive   = false;
+let compassOn   = false;
+
+function setTravel(mode, btn) {
+  travelMode = mode;
+  document.querySelectorAll('.travel-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function routeTo() {
+  if (!currentDest) return;
+  closePanel();
+  if (!userM) { flashMsg('⚠️ Activa el GPS para calcular la ruta', '#d97706'); return; }
+  flashMsg('⏳ Calculando ruta…', '#60a5fa');
+
+  const origin = userM.getLatLng();
+  const url = `https://router.project-osrm.org/route/v1/${travelMode}/`
+    + `${origin.lng},${origin.lat};${currentDest.lng},${currentDest.lat}`
+    + `?overview=full&geometries=geojson`;
+
+  fetch(url).then(r=>r.json()).then(data => {
+    if (!data.routes?.length) { flashMsg('❌ No se pudo calcular la ruta','#ef4444'); return; }
+    if (routeLayer) map.removeLayer(routeLayer);
+
+    const coords = data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+    const dist   = (data.routes[0].distance/1000).toFixed(2);
+    const mins   = Math.ceil(data.routes[0].duration/60);
+    const icon   = travelMode==='foot' ? '🚶' : '🚗';
+
+    routeLayer = L.polyline(coords,{
+      color:'#22d3ee', weight:6, opacity:0.9,
+      lineCap:'round', lineJoin:'round'
     }).addTo(map);
 
-    // Marcador de posición del usuario
-    let userMarker = null;
+    // Borde más oscuro debajo
+    L.polyline(coords,{
+      color:'#0e7490', weight:10, opacity:0.4,
+      lineCap:'round', lineJoin:'round'
+    }).addTo(map).bringToBack();
 
-    // Añadir marcadores de equipamientos
-    equipamientos.forEach(e => {
-      const icon = L.divIcon({
-        className: '',
-        html: `<div style="
-          background:${e.color};
-          width:14px; height:14px;
-          border-radius:50%;
-          border:2.5px solid white;
-          box-shadow:0 2px 8px rgba(0,0,0,0.4);
-        "></div>`,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
-      });
+    map.fitBounds(routeLayer.getBounds(),{padding:[70,70]});
 
-      const marker = L.marker([e.lat, e.lng], { icon }).addTo(map);
+    // Activar modo navegación — el mapa sigue al usuario
+    navActive = true;
+    const badge = document.getElementById('nav-badge');
+    document.getElementById('nav-text').textContent = `${icon} ${mins} min · ${dist} km`;
+    badge.style.display = 'flex';
+  }).catch(()=>flashMsg('❌ Error de conexión','#ef4444'));
+}
 
-      marker.on('click', () => openPanel(e));
-    });
+function stopNav() {
+  navActive = false;
+  document.getElementById('nav-badge').style.display = 'none';
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  // quitar borde oscuro
+  map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+}
 
-    function openPanel(e) {
-      document.getElementById('panel-nombre').textContent = e.nombre;
-      document.getElementById('panel-tipo').textContent = e.tipo;
-      document.getElementById('panel-desc').textContent = e.desc;
-      document.getElementById('panel-web').href = e.web;
-      document.getElementById('panel-maps').href =
-        `https://www.google.com/maps/dir/?api=1&destination=${e.lat},${e.lng}&travelmode=walking`;
-      document.getElementById('info-panel').style.display = 'block';
+function flashMsg(text, color) {
+  const prev = document.getElementById('flash-msg');
+  if (prev) prev.remove();
+  const d = document.createElement('div');
+  d.id='flash-msg';
+  d.style.cssText=`position:fixed;bottom:56px;left:50%;transform:translateX(-50%);
+    z-index:700;background:rgba(10,15,28,.96);border:1.5px solid ${color};
+    border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;
+    color:${color};white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5);`;
+  d.textContent=text;
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(),3000);
+}
+
+// ═══════════════════════════════
+// BRÚJULA — girar el mapa
+// ═══════════════════════════════
+function toggleCompass() {
+  compassOn = !compassOn;
+  const btn = document.getElementById('compass-btn');
+  btn.classList.toggle('active', compassOn);
+
+  if (compassOn) {
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+      // iOS 13+
+      DeviceOrientationEvent.requestPermission()
+        .then(r => { if (r==='granted') startCompass(); else { compassOn=false; btn.classList.remove('active'); } })
+        .catch(() => { compassOn=false; btn.classList.remove('active'); });
+    } else {
+      startCompass();
     }
+  } else {
+    stopCompass();
+  }
+}
 
-    function closePanel() {
-      document.getElementById('info-panel').style.display = 'none';
+function startCompass() {
+  window.addEventListener('deviceorientationabsolute', onOrientation, true);
+  window.addEventListener('deviceorientation', onOrientation, true);
+}
+function stopCompass() {
+  window.removeEventListener('deviceorientationabsolute', onOrientation, true);
+  window.removeEventListener('deviceorientation', onOrientation, true);
+  map.setBearing(0);
+  document.getElementById('compass-needle').style.transform = 'rotate(0deg)';
+}
+function onOrientation(e) {
+  let heading = e.webkitCompassHeading || (e.alpha ? (360 - e.alpha) : null);
+  if (heading === null) return;
+  // Use plugin if available, else CSS fallback on map pane
+  if (typeof map.setBearing === 'function') {
+    map.setBearing(heading);
+  } else {
+    // CSS fallback: rotate all map panes
+    const panes = document.querySelector('.leaflet-map-pane');
+    if (panes) {
+      const cx = map.getSize().x / 2;
+      const cy = map.getSize().y / 2;
+      panes.style.transformOrigin = `${cx}px ${cy}px`;
+      panes.style.transform = `rotate(${heading}deg)`;
     }
+  }
+  document.getElementById('compass-needle').style.transform = `rotate(${heading}deg)`;
+}
 
-    // ═══════════════════════════════════════════════
-    // GEOLOCALIZACIÓN EN TIEMPO REAL
-    // ═══════════════════════════════════════════════
-    const userIcon = L.divIcon({
-      className: '',
-      html: `<div style="
-        background:#3b82f6;
-        width:16px; height:16px;
-        border-radius:50%;
-        border:3px solid white;
-        box-shadow:0 0 0 4px rgba(59,130,246,0.3);
-      "></div>`,
-      iconSize: [16, 16],
-      iconAnchor: [8, 8]
-    });
-
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(
-        (pos) => {
-          const { latitude: lat, longitude: lng, accuracy } = pos.coords;
-
-          if (!userMarker) {
-            userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(map);
-            map.setView([lat, lng], 17);
-          } else {
-            userMarker.setLatLng([lat, lng]);
-          }
-
-          document.getElementById('gps-dot').classList.add('active');
-          document.getElementById('gps-text').textContent = `GPS activo (±${Math.round(accuracy)}m)`;
-        },
-        () => {
-          document.getElementById('gps-text').textContent = 'GPS no disponible';
-        },
-        { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
-      );
-    }
-
-    // ═══════════════════════════════════════════════
-    // MARCADORES AR CON AR.JS
-    // ═══════════════════════════════════════════════
-    function buildARMarkers() {
-      const scene = document.querySelector('a-scene');
-      if (!scene) return;
-
-      equipamientos.forEach(e => {
-        // Entidad principal geolocada
-        const entity = document.createElement('a-entity');
-        entity.setAttribute('gps-entity-place', `latitude: ${e.lat}; longitude: ${e.lng}`);
-        entity.setAttribute('look-at', '[gps-camera]');
-        entity.setAttribute('scale', '15 15 15');
-
-        // Texto del marcador
-        const text = document.createElement('a-text');
-        text.setAttribute('value', `${e.nombre}\n${e.tipo}`);
-        text.setAttribute('color', 'white');
-        text.setAttribute('align', 'center');
-        text.setAttribute('width', '6');
-        text.setAttribute('position', '0 1.5 0');
-
-        // Fondo del marcador
-        const box = document.createElement('a-box');
-        box.setAttribute('color', e.color);
-        box.setAttribute('opacity', '0.85');
-        box.setAttribute('width', '5.5');
-        box.setAttribute('height', '1.2');
-        box.setAttribute('depth', '0.1');
-        box.setAttribute('position', '0 1.5 -0.05');
-
-        // Círculo indicador en el suelo
-        const circle = document.createElement('a-circle');
-        circle.setAttribute('color', e.color);
-        circle.setAttribute('opacity', '0.5');
-        circle.setAttribute('radius', '0.5');
-        circle.setAttribute('rotation', '-90 0 0');
-        circle.setAttribute('position', '0 0.01 0');
-
-        entity.appendChild(box);
-        entity.appendChild(text);
-        entity.appendChild(circle);
-        scene.appendChild(entity);
-      });
-    }
-
-    // ═══════════════════════════════════════════════
-    // CONTROL DE MODOS: MAPA / AR
-    // ═══════════════════════════════════════════════
-    let arBuilt = false;
-
-    function setMode(mode) {
-      const mapContainer = document.getElementById('map-container');
-      const arContainer = document.getElementById('ar-container');
-      const arHint = document.getElementById('ar-hint');
-      const gps = document.getElementById('gps-badge');
-
-      document.getElementById('btn-map').classList.toggle('active', mode === 'map');
-      document.getElementById('btn-ar').classList.toggle('active', mode === 'ar');
-
-      if (mode === 'map') {
-        mapContainer.style.display = 'block';
-        arContainer.style.display = 'none';
-        arHint.style.display = 'none';
-        gps.style.display = 'block';
-        setTimeout(() => map.invalidateSize(), 100);
-
-      } else {
-        mapContainer.style.display = 'none';
-        arContainer.style.display = 'block';
-        arHint.style.display = 'block';
-        gps.style.display = 'none';
-        closePanel();
-
-        // Construir marcadores AR solo la primera vez
-        if (!arBuilt) {
-          const scene = document.querySelector('a-scene');
-          if (scene.hasLoaded) {
-            buildARMarkers();
-            arBuilt = true;
-          } else {
-            scene.addEventListener('loaded', () => {
-              buildARMarkers();
-              arBuilt = true;
-            });
-          }
-        }
-      }
-    }
-  </script>
+function setMode(mode){
+  document.getElementById('btn-map').classList.toggle('active',mode==='map');
+  document.getElementById('btn-ar').classList.toggle('active',mode==='ar');
+  document.getElementById('map-container').style.display=mode==='map'?'block':'none';
+  document.getElementById('ar-container').style.display=mode==='ar'?'block':'none';
+  document.getElementById('ar-hint').style.display=mode==='ar'?'block':'none';
+  document.getElementById('gps-badge').style.display=mode==='map'?'block':'none';
+  document.getElementById('search-bar').style.display=mode==='map'?'block':'none';
+  if(mode==='map'){closePanel();setTimeout(()=>map.invalidateSize(),100);}
+  else if(!arBuilt){
+    const sc=document.querySelector('a-scene');
+    sc.hasLoaded?(buildAR(),arBuilt=true):sc.addEventListener('loaded',()=>{buildAR();arBuilt=true;});
+  }
+}
+</script>
 </body>
 </html>
