@@ -87,7 +87,7 @@
 
     /* Imagen hero con gradiente */
     #panel-hero{
-      position:relative;width:100%;height:160px;overflow:hidden;flex-shrink:0;
+      position:relative;width:100%;height:110px;overflow:hidden;flex-shrink:0;
     }
     #panel-img{
       width:100%;height:100%;object-fit:cover;display:none;
@@ -129,13 +129,13 @@
 
     /* Contenido */
     #panel-content{padding:16px 18px 24px;}
-    #panel-nombre{font-size:18px;font-weight:800;color:#f1f5f9;letter-spacing:-0.3px;margin-bottom:12px;}
+    #panel-nombre{font-size:16px;font-weight:800;color:#f1f5f9;letter-spacing:-0.3px;margin-bottom:8px;}
 
     /* Historia */
     #panel-historia{
-      font-size:15px;color:#e2e8f0;line-height:1.85;
-      margin-bottom:16px;
-      padding:18px 20px;
+      font-size:13px;color:#e2e8f0;line-height:1.65;
+      margin-bottom:12px;
+      padding:12px 14px;
       background:linear-gradient(135deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%);
       border-left:4px solid;
       border-radius:0 14px 14px 0;
@@ -144,6 +144,7 @@
       letter-spacing:0.15px;
       position:relative;
     }
+    #panel-historia{max-height:120px;overflow-y:auto;}
     #panel-historia::before{
       content:'"';
       position:absolute;top:-10px;left:14px;
@@ -152,10 +153,10 @@
     }
 
     /* Botones de acción */
-    #panel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+    #panel-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
     .pBtn{
       flex:1;min-width:100px;
-      padding:10px 12px;border-radius:10px;font-size:12px;font-weight:700;
+      padding:8px 10px;border-radius:10px;font-size:12px;font-weight:700;
       text-decoration:none;cursor:pointer;border:none;
       display:flex;align-items:center;justify-content:center;gap:6px;
       transition:opacity .15s;
@@ -516,7 +517,18 @@ function onGPSError(err) {
   const btn = document.getElementById('gps-permit-btn');
   if (err.code === 1) {
     document.getElementById('gps-text').textContent = 'GPS bloqueado';
-    if (btn) { btn.textContent = '⚙️ Ajustes > Safari > Ubicación'; btn.style.background='#d97706'; }
+    if (btn) {
+      btn.style.cssText += `;background:#d97706;animation:none;font-size:12px;
+        padding:12px 18px;line-height:1.7;border-radius:14px;
+        max-width:300px;white-space:normal;text-align:center;width:300px;`;
+      btn.innerHTML = \`⚙️ <strong>GPS bloqueado — sigue estos pasos:</strong><br>
+        <span style="font-weight:400;font-size:11px;opacity:.92">
+          1. Abre <strong>Ajustes</strong> del iPhone<br>
+          2. Busca <strong>Safari</strong><br>
+          3. Toca <strong>Ubicación</strong> → Permitir<br>
+          4. Vuelve aquí y recarga la página
+        </span>\`;
+    }
   } else {
     document.getElementById('gps-text').textContent = 'Toca para activar';
   }
