@@ -6,8 +6,7 @@
   <title>Cabanyal en Red</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
-  <!-- A-Frame loaded lazily on AR activation -->
+  <!-- A-Frame loaded lazily when AR activated -->
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#fff;height:100vh;overflow:hidden;}
@@ -365,7 +364,7 @@ const EQ = [
 // ═══════════════════════════════
 // MAPA
 // ═══════════════════════════════
-const map = L.map('map',{zoomControl:true, rotate:true, bearing:0}).setView([39.4693,-0.3270],16);
+const map = L.map('map',{zoomControl:true}).setView([39.4693,-0.3270],16);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   {attribution:'© OpenStreetMap contributors'}).addTo(map);
 
@@ -500,10 +499,11 @@ let userM = null;
 
 function onGPSSuccess(pos) {
   const {latitude:la, longitude:ln, accuracy:ac} = pos.coords;
-  document.getElementById('gps-permit-btn').style.display = 'none';
+  const btn = document.getElementById('gps-permit-btn');
+  if (btn) btn.style.display = 'none';
   if (userM) {
     userM.setLatLng([la,ln]);
-    if (navActive) map.panTo([la,ln], {animate:true, duration:0.5});
+    if (typeof navActive !== 'undefined' && navActive) map.panTo([la,ln],{animate:true,duration:0.5});
   } else {
     userM = L.marker([la,ln],{icon:personIcon,zIndexOffset:9999}).addTo(map);
     map.setView([la,ln],17);
@@ -513,33 +513,31 @@ function onGPSSuccess(pos) {
 }
 
 function onGPSError(err) {
+  const btn = document.getElementById('gps-permit-btn');
   if (err.code === 1) {
     document.getElementById('gps-text').textContent = 'GPS bloqueado';
-    document.getElementById('gps-permit-btn').textContent = '⚙️ Ajustes > Safari > Ubicación';
-    document.getElementById('gps-permit-btn').style.background = '#d97706';
+    if (btn) { btn.textContent = '⚙️ Ajustes > Safari > Ubicación'; btn.style.background='#d97706'; }
   } else {
-    document.getElementById('gps-text').textContent = 'Toca para activar GPS';
+    document.getElementById('gps-text').textContent = 'Toca para activar';
   }
 }
 
 function requestGPS() {
-  if (!navigator.geolocation) { alert('Tu navegador no soporta geolocalización.'); return; }
-  document.getElementById('gps-permit-btn').textContent = '⏳ Solicitando permiso…';
+  if (!navigator.geolocation) return;
+  const btn = document.getElementById('gps-permit-btn');
+  if (btn) btn.textContent = '⏳ Solicitando permiso…';
   navigator.geolocation.getCurrentPosition(pos => {
     onGPSSuccess(pos);
-    navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, {enableHighAccuracy:true, maximumAge:2000, timeout:15000});
+    navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, {enableHighAccuracy:true,maximumAge:2000,timeout:15000});
   }, onGPSError, {enableHighAccuracy:true, timeout:15000});
 }
 
-// Intentar automáticamente al cargar
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(pos => {
     onGPSSuccess(pos);
-    navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, {enableHighAccuracy:true, maximumAge:2000, timeout:15000});
-  }, () => {
-    document.getElementById('gps-text').textContent = 'Toca para activar GPS';
-  }, {enableHighAccuracy:true, timeout:5000});
-});
+    navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, {enableHighAccuracy:true,maximumAge:2000,timeout:15000});
+  }, () => {}, {enableHighAccuracy:true, timeout:5000});
+};
 
 // BUSCADOR
 function renderDD(items){
@@ -563,15 +561,7 @@ function selectEQ(id){
   setTimeout(()=>openPanel(e),400);
 }
 
-// AR
-let arBuilt=false;
-function buildAR(){
-  const scene=document.querySelector('a-scene');
-  EQ.forEach(e=>{
-    const ent=document.createElement('a-entity');
-    ent.setAttribute('gps-entity-place',`latitude:${e.lat}; longitude:${e.lng}`);
-    ent.setAttribute('look-at','[gps-camera]');ent.setAttribute('scale','15 15 15');
-    const bg=document.createElement('a-box// AR — lazy loading (cámara solo se activa al pulsar botón AR)
+// AR — cámara solo se activa al pulsar botón AR
 let arBuilt = false;
 
 function loadScript(src) {
@@ -585,17 +575,15 @@ function loadScript(src) {
 async function launchAR() {
   const container = document.getElementById('ar-container');
   container.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#60a5fa;font-size:14px;font-weight:600;">⏳ Cargando cámara AR…</div>';
-
   try {
     if (!window.AFRAME) {
       await loadScript('https://aframe.io/releases/1.4.0/aframe.min.js');
       await loadScript('https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js');
     }
   } catch(e) {
-    container.innerHTML = '<div style="padding:20px;color:#ef4444;text-align:center;font-size:13px">❌ Error cargando AR.<br>Comprueba la conexión e inténtalo de nuevo.</div>';
+    container.innerHTML = '<div style="padding:30px;color:#ef4444;text-align:center;font-size:13px">❌ Error cargando AR.<br>Comprueba la conexión.</div>';
     return;
   }
-
   container.innerHTML = '';
   const scene = document.createElement('a-scene');
   scene.setAttribute('vr-mode-ui','enabled:false');
@@ -603,11 +591,9 @@ async function launchAR() {
   scene.setAttribute('renderer','antialias:true; alpha:true');
   scene.setAttribute('embedded','');
   const cam = document.createElement('a-camera');
-  cam.setAttribute('gps-camera','');
-  cam.setAttribute('rotation-reader','');
+  cam.setAttribute('gps-camera',''); cam.setAttribute('rotation-reader','');
   scene.appendChild(cam);
   container.appendChild(scene);
-
   const addMarkers = () => {
     EQ.forEach(e => {
       const ent = document.createElement('a-entity');
@@ -618,7 +604,8 @@ async function launchAR() {
       bg.setAttribute('width','6'); bg.setAttribute('height','1.4');
       bg.setAttribute('depth','0.12'); bg.setAttribute('position','0 1.5 -0.06');
       const tx = document.createElement('a-text');
-      tx.setAttribute('value',`${e.emoji} ${e.nombre}\n${e.tipo}`);
+      tx.setAttribute('value',`${e.emoji} ${e.nombre}
+${e.tipo}`);
       tx.setAttribute('color','white'); tx.setAttribute('align','center');
       tx.setAttribute('width','5.5'); tx.setAttribute('position','0 1.5 0');
       const ci = document.createElement('a-circle');
@@ -630,11 +617,16 @@ async function launchAR() {
     });
     arBuilt = true;
   };
-
   scene.hasLoaded ? addMarkers() : scene.addEventListener('loaded', addMarkers);
 }
 
-yId('ar-hint').style.display=mode==='ar'?'block':'none';
+
+function setMode(mode){
+  document.getElementById('btn-map').classList.toggle('active',mode==='map');
+  document.getElementById('btn-ar').classList.toggle('active',mode==='ar');
+  document.getElementById('map-container').style.display=mode==='map'?'block':'none';
+  document.getElementById('ar-container').style.display=mode==='ar'?'block':'none';
+  document.getElementById('ar-hint').style.display=mode==='ar'?'block':'none';
   document.getElementById('gps-badge').style.display=mode==='map'?'block':'none';
   document.getElementById('search-bar').style.display=mode==='map'?'block':'none';
   if(mode==='map'){closePanel();setTimeout(()=>map.invalidateSize(),100);}
