@@ -56,7 +56,7 @@
     .s-name{font-size:13px;font-weight:600;color:#e2e8f0;}
     .s-tipo{font-size:10px;color:#64748b;}
 
-    #map-container{position:fixed;top:56px;left:0;right:0;bottom:0;z-index:100;display:block!important;}
+    #map-container{position:fixed;top:56px;left:0;right:0;bottom:0;z-index:100;}
     #map{width:100%;height:100%;}
 
     /* FOTO-CARD */
@@ -87,7 +87,7 @@
 
     /* Imagen hero con gradiente */
     #panel-hero{
-      position:relative;width:100%;height:110px;overflow:hidden;flex-shrink:0;
+      position:relative;width:100%;height:100px;overflow:hidden;flex-shrink:0;
     }
     #panel-img{
       width:100%;height:100%;object-fit:cover;display:none;
@@ -129,14 +129,14 @@
 
     /* Contenido */
     #panel-content{padding:16px 18px 24px;}
-    #panel-nombre{font-size:16px;font-weight:800;color:#f1f5f9;letter-spacing:-0.3px;margin-bottom:8px;}
+    #panel-nombre{font-size:15px;font-weight:800;color:#f1f5f9;letter-spacing:-0.3px;margin-bottom:6px;}
 
     /* Historia */
     #panel-historia{
-      font-size:13px;color:#e2e8f0;line-height:1.65;
-      margin-bottom:12px;
-      padding:12px 14px;
-      max-height:130px;overflow-y:auto;
+      font-size:12.5px;color:#e2e8f0;line-height:1.6;
+      margin-bottom:10px;
+      max-height:110px;overflow-y:auto;
+      padding:10px 14px;
       background:linear-gradient(135deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%);
       border-left:4px solid;
       border-radius:0 14px 14px 0;
@@ -233,6 +233,12 @@
     #gps-dot.on{background:#22c55e;animation:pulse 1.5s infinite;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
     #gps-permit-btn{
+      display:none;position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
+      z-index:700;background:#2563eb;color:#fff;border:none;border-radius:14px;
+      padding:13px 28px;font-size:14px;font-weight:700;cursor:pointer;
+      white-space:nowrap;box-shadow:0 4px 24px rgba(37,99,235,0.55);
+    }
+    #gps-permit-btn{
       display:block;position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
       z-index:700;background:#2563eb;color:#fff;border:none;border-radius:14px;
       padding:13px 28px;font-size:14px;font-weight:700;cursor:pointer;
@@ -302,6 +308,7 @@
 </button>
 <div id="nav-badge"><span id="nav-text"></span><button onclick="stopNav()">✕ Parar</button></div>
 <div id="gps-badge"><span id="gps-dot"></span><span id="gps-text">Buscando GPS…</span></div>
+<button id="gps-permit-btn" onclick="requestGPS()">📍 Permitir ubicación</button>
 <button id="gps-permit-btn" onclick="requestGPS()">📍 Permitir ubicación</button>
 <div id="ar-hint">📍 Apunta el móvil hacia la calle — los espacios aparecerán en la dirección correcta</div>
 
@@ -452,10 +459,8 @@ function buildMarkers(){
   });
 }
 buildMarkers();
-map.on('zoomend', buildMarkers);
-// Force map to render correctly on mobile
-setTimeout(() => map.invalidateSize(), 300);
-setTimeout(() => map.invalidateSize(), 1000);
+map.on('zoomend',buildMarkers);
+setTimeout(()=>map.invalidateSize(),500);
 
 // ── Panel info ──
 function openPanel(e){
@@ -520,18 +525,7 @@ function onGPSError(err) {
   const btn = document.getElementById('gps-permit-btn');
   if (err.code === 1) {
     document.getElementById('gps-text').textContent = 'GPS bloqueado';
-    if (btn) {
-      btn.style.cssText += `;background:#d97706;animation:none;font-size:12px;
-        padding:12px 18px;line-height:1.7;border-radius:14px;
-        max-width:300px;white-space:normal;text-align:center;width:300px;`;
-      btn.innerHTML = \`⚙️ <strong>GPS bloqueado — sigue estos pasos:</strong><br>
-        <span style="font-weight:400;font-size:11px;opacity:.92">
-          1. Abre <strong>Ajustes</strong> del iPhone<br>
-          2. Busca <strong>Safari</strong><br>
-          3. Toca <strong>Ubicación</strong> → Permitir<br>
-          4. Vuelve aquí y recarga la página
-        </span>\`;
-    }
+    if (btn) { btn.textContent = '⚙️ Ajustes > Safari > Ubicación'; btn.style.background='#d97706'; }
   } else {
     document.getElementById('gps-text').textContent = 'Toca para activar';
   }
@@ -547,28 +541,11 @@ function requestGPS() {
   }, onGPSError, {enableHighAccuracy:true, timeout:15000});
 }
 
-// Initialize map immediately — don't wait for GPS
-setTimeout(() => {
-  if (!userM) {
-    // Map loads fine without GPS — just show the permit button
-    document.getElementById('gps-text').textContent = 'Toca para activar';
-  }
-}, 3000);
-
 if (navigator.geolocation) {
-  try {
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        onGPSSuccess(pos);
-        navigator.geolocation.watchPosition(onGPSSuccess, onGPSError,
-          {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
-      },
-      err => { onGPSError(err); },
-      {enableHighAccuracy:false, timeout:8000, maximumAge:60000}
-    );
-  } catch(e) {
-    console.log('GPS init error:', e);
-  }
+  navigator.geolocation.getCurrentPosition(pos => {
+    onGPSSuccess(pos);
+    navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, {enableHighAccuracy:true,maximumAge:2000,timeout:15000});
+  }, () => {}, {enableHighAccuracy:true, timeout:5000});
 };
 
 // BUSCADOR
