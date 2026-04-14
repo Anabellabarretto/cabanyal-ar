@@ -582,7 +582,12 @@ function routeTo() {
   flashMsg('⏳ Calculando ruta…', '#60a5fa');
 
   const origin = userM.getLatLng();
-  const url = `https://router.project-osrm.org/route/v1/${travelMode}/`
+  // Servidores OSRM distintos según modo — rutas realmente diferentes
+  const servers = {
+    foot:    'https://routing.openstreetmap.de/routed-foot/route/v1/foot',
+    driving: 'https://routing.openstreetmap.de/routed-car/route/v1/driving',
+  };
+  const url = `${servers[travelMode]}/`
     + `${origin.lng},${origin.lat};${currentDest.lng},${currentDest.lat}`
     + `?overview=full&geometries=geojson`;
 
