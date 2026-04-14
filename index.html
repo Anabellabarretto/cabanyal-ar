@@ -69,7 +69,7 @@
       border:2.5px solid #fff;transition:transform .18s;
     }
     .fcard:hover{transform:scale(1.06);}
-    .fcard-img{width:100%;object-fit:cover;display:block;}
+    .fcard-img{width:100%;object-fit:cover;object-position:center top;display:block;}
     .fcard-img-placeholder{width:100%;display:flex;align-items:center;justify-content:center;background:#1e293b;}
     .fcard-label{padding:3px 4px;font-weight:700;text-align:center;line-height:1.2;color:#0f172a;border-top:2.5px solid;}
     .fcard-arrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;}
@@ -425,7 +425,7 @@ function cardSize(z){
 function makeCard(e,zoom){
   const s=cardSize(zoom);
   const img=e.img
-    ?`<img class="fcard-img" src="${e.img}" style="height:${s.h}px"
+    ?`<img class="fcard-img" src="${e.img}" style="height:${s.h}px;object-position:center top;"
         onerror="this.outerHTML='<div class=fcard-img-placeholder style=height:${s.h}px;font-size:${Math.round(s.h*.4)}px>${e.emoji}</div>'">`
     :`<div class="fcard-img-placeholder" style="height:${s.h}px;font-size:${Math.round(s.h*.4)}px">${e.emoji}</div>`;
   const label=zoom>=15
