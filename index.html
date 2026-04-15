@@ -6,7 +6,6 @@
   <title>Cabanyal en Red</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
   <!-- A-Frame loaded lazily on AR activation -->
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -365,7 +364,7 @@ const EQ = [
 // ═══════════════════════════════
 // MAPA
 // ═══════════════════════════════
-const map = L.map('map',{zoomControl:true, rotate:true, bearing:0}).setView([39.4693,-0.3270],16);
+const map = L.map('map',{zoomControl:true}).setView([39.4693,-0.3270],16);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   {attribution:'© OpenStreetMap contributors'}).addTo(map);
 
@@ -531,6 +530,37 @@ function requestGPS() {
     onGPSSuccess(pos);
     navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, {enableHighAccuracy:true, maximumAge:2000, timeout:15000});
   }, onGPSError, {enableHighAccuracy:true, timeout:15000});
+}
+
+// BRÚJULA — gira el mapa con el sensor del dispositivo
+let compassActive = false;
+let compassHandler = null;
+function toggleCompass() {
+  const btn = document.getElementById('compass-btn');
+  const needle = document.getElementById('compass-needle');
+  if (compassActive) {
+    compassActive = false;
+    btn.classList.remove('active');
+    if (compassHandler) window.removeEventListener('deviceorientationabsolute', compassHandler);
+    if (compassHandler) window.removeEventListener('deviceorientation', compassHandler);
+    compassHandler = null;
+    map.getContainer().style.transform = '';
+    return;
+  }
+  compassActive = true;
+  btn.classList.add('active');
+  compassHandler = (e) => {
+    const heading = e.webkitCompassHeading ?? (e.absolute ? -e.alpha : null);
+    if (heading == null) return;
+    needle.style.transform = `rotate(${heading}deg)`;
+    map.getContainer().style.transformOrigin = '50% 50%';
+    map.getContainer().style.transform = `rotate(${-heading}deg)`;
+  };
+  if ('ondeviceorientationabsolute' in window) {
+    window.addEventListener('deviceorientationabsolute', compassHandler);
+  } else {
+    window.addEventListener('deviceorientation', compassHandler);
+  }
 }
 
 // Intentar automáticamente al cargar
