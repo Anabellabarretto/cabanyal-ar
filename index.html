@@ -6,12 +6,9 @@
   <title>Cabanyal en Red</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- A-Frame loaded lazily on AR activation -->
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#fff;height:100vh;overflow:hidden;}
-
-    /* HEADER */
     #header{
       position:fixed;top:0;left:0;right:0;z-index:1000;
       background:rgba(15,23,42,0.95);backdrop-filter:blur(10px);
@@ -26,8 +23,6 @@
       transition:all .2s;margin-left:6px;
     }
     .mode-btn.active{background:#2563eb;border-color:#2563eb;color:#fff;}
-
-    /* BUSCADOR */
     #search-bar{
       position:fixed;top:62px;left:50%;transform:translateX(-50%);
       z-index:900;width:min(400px,90vw);
@@ -55,11 +50,8 @@
     .s-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
     .s-name{font-size:13px;font-weight:600;color:#e2e8f0;}
     .s-tipo{font-size:10px;color:#64748b;}
-
     #map-container{position:fixed;top:56px;left:0;right:0;bottom:0;z-index:100;}
     #map{width:100%;height:100%;}
-
-    /* FOTO-CARD */
     .fcard-wrap{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
     .fcard{
       background:#fff;border-radius:10px;overflow:hidden;
@@ -71,47 +63,21 @@
     .fcard-img-placeholder{width:100%;display:flex;align-items:center;justify-content:center;background:#1e293b;}
     .fcard-label{padding:3px 4px;font-weight:700;text-align:center;line-height:1.2;color:#0f172a;border-top:2.5px solid;}
     .fcard-arrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;}
-
     #ar-container{display:none;position:fixed;top:56px;left:0;right:0;bottom:0;z-index:200;}
-
-    /* ══ PANEL INFO — diseño artístico ══ */
     #info-panel{
       display:none;position:fixed;bottom:0;left:0;right:0;z-index:500;
-      background:#0c1220;
-      border-radius:24px 24px 0 0;
-      box-shadow:0 -8px 40px rgba(0,0,0,0.6);
-      overflow:hidden;
-      max-height:82vh;
-      overflow-y:auto;
+      background:#0c1220;border-radius:24px 24px 0 0;
+      box-shadow:0 -8px 40px rgba(0,0,0,0.6);overflow:hidden;max-height:82vh;overflow-y:auto;
     }
-
-    /* Imagen hero con gradiente */
-    #panel-hero{
-      position:relative;width:100%;height:160px;overflow:hidden;flex-shrink:0;
-    }
-    #panel-img{
-      width:100%;height:100%;object-fit:cover;display:none;
-    }
-    #panel-fallback{
-      width:100%;height:100%;display:flex;align-items:center;
-      justify-content:center;font-size:56px;
-    }
-    /* Gradiente artístico sobre la imagen */
+    #panel-hero{position:relative;width:100%;height:160px;overflow:hidden;flex-shrink:0;}
+    #panel-img{width:100%;height:100%;object-fit:cover;display:none;}
+    #panel-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:56px;}
     #panel-hero::after{
       content:'';position:absolute;inset:0;
-      background:linear-gradient(
-        to bottom,
-        rgba(12,18,32,0) 0%,
-        rgba(12,18,32,0.4) 50%,
-        rgba(12,18,32,0.95) 100%
-      );
+      background:linear-gradient(to bottom,rgba(12,18,32,0) 0%,rgba(12,18,32,0.4) 50%,rgba(12,18,32,0.95) 100%);
       pointer-events:none;
     }
-    /* Barra de color del centro encima del gradiente */
-    #panel-colorbar{
-      position:absolute;top:0;left:0;right:0;height:3px;z-index:2;
-    }
-    /* Tipo badge flotante sobre la imagen */
+    #panel-colorbar{position:absolute;top:0;left:0;right:0;height:3px;z-index:2;}
     #panel-tipo-badge{
       position:absolute;bottom:12px;left:16px;z-index:3;
       font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
@@ -126,46 +92,28 @@
       color:#fff;font-size:14px;cursor:pointer;border-radius:50%;
       width:30px;height:30px;display:flex;align-items:center;justify-content:center;
     }
-
-    /* Contenido */
     #panel-content{padding:16px 18px 24px;}
     #panel-nombre{font-size:18px;font-weight:800;color:#f1f5f9;letter-spacing:-0.3px;margin-bottom:12px;}
-
-    /* Historia */
     #panel-historia{
-      font-size:15px;color:#e2e8f0;line-height:1.85;
-      margin-bottom:16px;
-      padding:18px 20px;
+      font-size:15px;color:#e2e8f0;line-height:1.85;margin-bottom:16px;padding:18px 20px;
       background:linear-gradient(135deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%);
-      border-left:4px solid;
-      border-radius:0 14px 14px 0;
-      box-shadow:inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 12px rgba(0,0,0,0.2);
-      font-style:italic;
-      letter-spacing:0.15px;
-      position:relative;
+      border-left:4px solid;border-radius:0 14px 14px 0;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,0.07),0 2px 12px rgba(0,0,0,0.2);
+      font-style:italic;letter-spacing:0.15px;position:relative;
     }
     #panel-historia::before{
-      content:'"';
-      position:absolute;top:-10px;left:14px;
-      font-size:64px;font-style:normal;line-height:1;
-      opacity:0.18;font-family:Georgia,serif;
+      content:'\201C';position:absolute;top:-10px;left:14px;
+      font-size:64px;font-style:normal;line-height:1;opacity:0.18;font-family:Georgia,serif;
     }
-
-    /* Botones de acción */
     #panel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
     .pBtn{
-      flex:1;min-width:100px;
-      padding:10px 12px;border-radius:10px;font-size:12px;font-weight:700;
+      flex:1;min-width:100px;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:700;
       text-decoration:none;cursor:pointer;border:none;
-      display:flex;align-items:center;justify-content:center;gap:6px;
-      transition:opacity .15s;
+      display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s;
     }
     .pBtn:hover{opacity:.85;}
     .pBtn.primary{background:#2563eb;color:#fff;}
-    .pBtn.secondary{background:rgba(255,255,255,0.07);color:#cbd5e1;border:1px solid rgba(255,255,255,0.1);}
     .pBtn.maps{background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.25);}
-
-    /* Redes sociales */
     #panel-social{display:flex;gap:8px;flex-wrap:wrap;}
     .socialBtn{
       padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;
@@ -175,10 +123,6 @@
     .socialBtn:hover{opacity:.8;}
     .socialBtn.ig{background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;}
     .socialBtn.fb{background:#1877f2;color:#fff;}
-    .socialBtn.web{background:rgba(255,255,255,0.07);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);}
-
-    /* GPS */
-    /* COMPASS BTN */
     #compass-btn{
       position:fixed;top:62px;right:14px;z-index:900;
       width:40px;height:40px;border-radius:50%;
@@ -189,40 +133,29 @@
     }
     #compass-btn.active{background:#2563eb;border-color:#2563eb;color:#fff;}
     #compass-needle{display:inline-block;transition:transform .3s;}
-
-    /* TRAVEL MODE — sub-pills under Cómo llegar */
     #travel-mode{
-      display:flex;align-items:center;gap:6px;
-      margin-top:6px;padding:8px 10px;
-      background:rgba(255,255,255,0.04);border-radius:10px;
-      border:1px solid rgba(255,255,255,0.07);
+      display:flex;align-items:center;gap:6px;margin-top:6px;padding:8px 10px;
+      background:rgba(255,255,255,0.04);border-radius:10px;border:1px solid rgba(255,255,255,0.07);
     }
     #travel-label{font-size:11px;color:#64748b;font-weight:600;white-space:nowrap;}
     .travel-btn{
       padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;
       border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);
-      color:#64748b;cursor:pointer;transition:all .2s;
-      display:flex;align-items:center;gap:4px;
+      color:#64748b;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:4px;
     }
     .travel-btn.walk.active{background:rgba(16,185,129,0.2);color:#34d399;border-color:#34d399;}
     .travel-btn.drive.active{background:rgba(249,115,22,0.2);color:#fb923c;border-color:#fb923c;}
-
-    /* NAV BADGE */
     #nav-badge{
       display:none;position:fixed;bottom:56px;left:50%;transform:translateX(-50%);
-      z-index:600;background:rgba(10,15,28,0.96);
-      border-radius:14px;padding:10px 18px;
+      z-index:600;background:rgba(10,15,28,0.96);border-radius:14px;padding:10px 18px;
       font-size:13px;font-weight:700;color:#22d3ee;
-      box-shadow:0 4px 20px rgba(0,0,0,0.5);
-      border:1.5px solid #22d3ee;
-      display:none;align-items:center;gap:12px;white-space:nowrap;
+      box-shadow:0 4px 20px rgba(0,0,0,0.5);border:1.5px solid #22d3ee;
+      align-items:center;gap:12px;white-space:nowrap;
     }
     #nav-badge button{
       background:rgba(255,255,255,0.1);border:none;color:#22d3ee;
-      font-size:11px;font-weight:700;cursor:pointer;
-      border-radius:6px;padding:3px 9px;
+      font-size:11px;font-weight:700;cursor:pointer;border-radius:6px;padding:3px 9px;
     }
-
     #gps-badge{
       position:fixed;bottom:16px;right:14px;z-index:400;
       background:rgba(15,23,42,0.9);border:1px solid rgba(255,255,255,0.1);
@@ -239,7 +172,6 @@
       animation:pulse-btn 2s infinite;
     }
     @keyframes pulse-btn{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.04)}}
-
     #ar-hint{
       display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
       z-index:600;background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.12);
@@ -253,27 +185,26 @@
 <div id="header">
   <div><h1>Cabanyal en Red</h1><p>Oferta cultural del barrio</p></div>
   <div>
-    <button class="mode-btn active" id="btn-map" onclick="setMode('map')">🗺 Mapa</button>
-    <button class="mode-btn" id="btn-ar" onclick="setMode('ar')">📷 AR</button>
+    <button class="mode-btn active" id="btn-map" onclick="setMode('map')">&#x1F5FA; Mapa</button>
+    <button class="mode-btn" id="btn-ar" onclick="setMode('ar')">&#x1F4F7; AR</button>
   </div>
 </div>
 
 <div id="search-bar">
   <div id="search-wrap">
-    <span id="search-icon">🔍</span>
-    <input id="search-input" type="text" placeholder="Buscar centro cultural…" autocomplete="off"
+    <span id="search-icon">&#x1F50D;</span>
+    <input id="search-input" type="text" placeholder="Buscar centro cultural..." autocomplete="off"
       oninput="filterSearch(this.value)" onfocus="showDD()" onblur="hideDD()"/>
   </div>
   <div id="search-dropdown"></div>
 </div>
 
 <div id="map-container"><div id="map"></div></div>
-
 <div id="ar-container"></div>
 
 <!-- PANEL INFO -->
 <div id="info-panel">
-  <button id="close-panel" onclick="closePanel()">✕</button>
+  <button id="close-panel" onclick="closePanel()">&#x2715;</button>
   <div id="panel-hero">
     <img id="panel-img" src="" alt=""/>
     <div id="panel-fallback"></div>
@@ -284,37 +215,37 @@
     <div id="panel-nombre"></div>
     <div id="panel-historia"></div>
     <div id="panel-actions">
-      <a class="pBtn primary" id="panel-web" href="#" target="_blank">🎭 Ver programación</a>
-      <button class="pBtn maps" id="panel-maps" onclick="routeTo()">📍 Cómo llegar</button>
+      <a class="pBtn primary" id="panel-web" href="#" target="_blank">&#x1F3AD; Ver programacion</a>
+      <button class="pBtn maps" id="panel-maps" onclick="routeTo()">&#x1F4CD; Como llegar</button>
     </div>
     <div id="travel-mode">
       <span id="travel-label">Modo:</span>
-      <button class="travel-btn walk active" id="btn-walk" onclick="setTravel('foot',this)">🚶 A pie</button>
-      <button class="travel-btn drive" id="btn-drive" onclick="setTravel('driving',this)">🚗 En coche</button>
+      <button class="travel-btn walk active" id="btn-walk" onclick="setTravel('foot',this)">&#x1F6B6; A pie</button>
+      <button class="travel-btn drive" id="btn-drive" onclick="setTravel('driving',this)">&#x1F697; En coche</button>
     </div>
     <div id="panel-social"></div>
   </div>
 </div>
 
-<button id="compass-btn" onclick="toggleCompass()" title="Girar mapa con brújula">
-  <span id="compass-needle">🧭</span>
+<button id="compass-btn" onclick="toggleCompass()" title="Girar mapa con brujula">
+  <span id="compass-needle">&#x1F9ED;</span>
 </button>
-<div id="nav-badge"><span id="nav-text"></span><button onclick="stopNav()">✕ Parar</button></div>
-<div id="gps-badge"><span id="gps-dot"></span><span id="gps-text">Buscando GPS…</span></div>
-<button id="gps-permit-btn" onclick="requestGPS()">📍 Permitir ubicación</button>
-<div id="ar-hint">📍 Apunta el móvil hacia la calle — los espacios aparecerán en la dirección correcta</div>
+<div id="nav-badge"><span id="nav-text"></span><button onclick="stopNav()">&#x2715; Parar</button></div>
+<div id="gps-badge"><span id="gps-dot"></span><span id="gps-text">Buscando GPS...</span></div>
+<button id="gps-permit-btn" onclick="requestGPS()">&#x1F4CD; Permitir ubicacion</button>
+<div id="ar-hint">&#x1F4CD; Apunta el movil hacia la calle - los espacios apareceran en la direccion correcta</div>
 
 <script>
-// ═══════════════════════════════════════════════════
-// DATOS  — añade tus fotos en img: y redes en social:
-// ═══════════════════════════════════════════════════
-const EQ = [
+/* ═══════════════════════════════════════════════════
+   DATOS
+   ═══════════════════════════════════════════════════ */
+var EQ = [
   {
     id:1, nombre:"Centre Cultural Reina 121",
     tipo:"Centro cultural municipal",
-    lat:39.4697, lng:-0.3267, color:"#2563eb", emoji:"🏛️",
+    lat:39.4697, lng:-0.3267, color:"#2563eb", emoji:"\u{1F3DB}\uFE0F",
     img:"fotos/hub.jpg",
-    historia:"La Reina 121 ocupa tres casas antiguas del Cabanyal cosidas entre sí y devueltas al barrio tras años de abandono. Su nombre es el número de la calle: un gesto de austeridad que resume su filosofía de pertenecer al barrio sin imponerse. Coprogramada con más de cuarenta colectivos locales, acoge talleres, exposiciones y conciertos cada semana. Es también la sede del Hub Cultural Cabanyal, plataforma que conecta más de sesenta agentes culturales del Distrito Marítimo — artistas, gestores y colectivos que detectaron una paradoja: el barrio con más vida cultural de Valencia era el que menos visibilidad digital tenía.",
+    historia:"La Reina 121 ocupa tres casas antiguas del Cabanyal cosidas entre si y devueltas al barrio tras anios de abandono. Su nombre es el numero de la calle: un gesto de austeridad que resume su filosofia de pertenecer al barrio sin imponerse. Coprogramada con mas de cuarenta colectivos locales, acoge talleres, exposiciones y conciertos cada semana. Es tambien la sede del Hub Cultural Cabanyal, plataforma que conecta mas de sesenta agentes culturales del Distrito Maritimo.",
     web:"https://cultural.valencia.es/es/espais/centro-cultural-reina-121/",
     instagram:"https://www.instagram.com/reina121_cabanyal",
     facebook:""
@@ -322,9 +253,9 @@ const EQ = [
   {
     id:2, nombre:"Centre Cultural Escorxador",
     tipo:"Centro cultural municipal",
-    lat:39.4700, lng:-0.3255, color:"#7c3aed", emoji:"🏚️",
+    lat:39.4700, lng:-0.3255, color:"#7c3aed", emoji:"\u{1F3DA}\uFE0F",
     img:"fotos/escorxador.jpg",
-    historia:"En 1910 este edificio abría como matadero municipal del Cabanyal. Las reses entraban por Carrer Sant Pere, el barrio marino olía a sal y a sangre, y nadie imaginaba que un siglo después las mismas paredes albergarían exposiciones fotográficas sobre las mujeres de la Semana Santa Marinera. La rehabilitación conservó la estructura de ladrillo visto y las cubiertas originales. Hoy el Escorxador programa su historia como si fuese material artístico: la memoria del barrio es el centro de cada ciclo, de cada residencia, de cada taller.",
+    historia:"En 1910 este edificio abria como matadero municipal del Cabanyal. Las reses entraban por Carrer Sant Pere, el barrio marino olia a sal y a sangre, y nadie imaginaba que un siglo despues las mismas paredes albergarian exposiciones fotograficas sobre las mujeres de la Semana Santa Marinera. La rehabilitacion conservo la estructura de ladrillo visto y las cubiertas originales.",
     web:"https://cultural.valencia.es/es/espais/centro-cultural-escorxador/",
     instagram:"https://www.instagram.com/ccescorxador",
     facebook:""
@@ -332,19 +263,19 @@ const EQ = [
   {
     id:3, nombre:"Teatro La Estrella",
     tipo:"Teatro",
-    lat:39.4703, lng:-0.3280, color:"#dc2626", emoji:"🎭",
+    lat:39.4703, lng:-0.3280, color:"#dc2626", emoji:"\u{1F3AD}",
     img:"fotos/teatro.png",
-    historia:"El Teatro La Estrella lleva décadas siendo el salón de actos del Cabanyal cuando el Cabanyal todavía no estaba de moda. Nació como espacio de entretenimiento popular para las familias marineras del barrio — varietés, zarzuela, cine de verano — y sobrevivió a la especulación, al abandono y a la pandemia. Hoy mantiene una programación ecléctica que mezcla teatro infantil, compañías emergentes valencianas y noches de spoken word. Es el tipo de teatro que no pide al público que se comporte.",
+    historia:"El Teatro La Estrella lleva decadas siendo el salon de actos del Cabanyal cuando el Cabanyal todavia no estaba de moda. Nacio como espacio de entretenimiento popular para las familias marineras del barrio y sobrevivio a la especulacion, al abandono y a la pandemia. Hoy mantiene una programacion eclectica que mezcla teatro infantil, companias emergentes valencianas y noches de spoken word.",
     web:"https://www.teatrolaestrella.es",
     instagram:"https://www.instagram.com/teatrolaestrella",
     facebook:"https://www.facebook.com/teatrolaestrella"
   },
   {
-    id:4, nombre:"Biblioteca Pública Cabanyal",
+    id:4, nombre:"Biblioteca Publica Cabanyal",
     tipo:"Biblioteca",
-    lat:39.4688, lng:-0.3272, color:"#059669", emoji:"📚",
+    lat:39.4688, lng:-0.3272, color:"#059669", emoji:"\u{1F4DA}",
     img:"fotos/biblioteca.jpg",
-    historia:"Las bibliotecas de barrio tienen algo que los grandes equipamientos culturales no pueden imitar: el vecino que llega con el periódico bajo el brazo, los niños que hacen los deberes en la misma mesa que los jubilados que leen novelas. La Biblioteca del Cabanyal lleva años siendo ese tercer lugar — ni casa ni trabajo — donde el barrio se encuentra sin necesidad de consumir nada. Su fondo incluye una colección específica sobre la historia del Cabanyal-Canyamelar, con documentos, fotografías y publicaciones locales difíciles de encontrar en otro sitio.",
+    historia:"Las bibliotecas de barrio tienen algo que los grandes equipamientos culturales no pueden imitar: el vecino que llega con el periodico bajo el brazo, los ninios que hacen los deberes en la misma mesa que los jubilados que leen novelas. La Biblioteca del Cabanyal lleva anios siendo ese tercer lugar donde el barrio se encuentra sin necesidad de consumir nada.",
     web:"https://bibliotecas.valencia.es",
     instagram:"",
     facebook:""
@@ -352,171 +283,227 @@ const EQ = [
   {
     id:6, nombre:"Mercat del Cabanyal",
     tipo:"Patrimonio y espacio cultural",
-    lat:39.4680, lng:-0.3285, color:"#0891b2", emoji:"🏪",
+    lat:39.4680, lng:-0.3285, color:"#0891b2", emoji:"\u{1F3EA}",
     img:"fotos/mercat.jpg",
-    historia:"El Mercat del Cabanyal abrió en 1952 para dar servicio a un barrio que vivía de la pesca y que se organizaba al ritmo de las mareas. Los martes y jueves eran los días del pescado fresco — la lonja descargaba al amanecer y el mercado se llenaba antes de que el sol calentara. Hoy el mercado ha sobrevivido a los supermercados y a la pandemia con una mezcla de puestos tradicionales y nuevos vendedores de producto local. Los sábados por la mañana sigue siendo el mejor lugar del barrio para escuchar valenciano sin buscarlo.",
+    historia:"El Mercat del Cabanyal abrio en 1952 para dar servicio a un barrio que vivia de la pesca y que se organizaba al ritmo de las mareas. Hoy el mercado ha sobrevivido a los supermercados y a la pandemia con una mezcla de puestos tradicionales y nuevos vendedores de producto local.",
     web:"https://www.mercadosmunicipales.es",
     instagram:"https://www.instagram.com/mercatdelcabanyal",
     facebook:"https://www.facebook.com/mercatcabanyal"
-  },
+  }
 ];
 
-// ═══════════════════════════════
-// MAPA
-// ═══════════════════════════════
-const map = L.map('map',{zoomControl:true}).setView([39.4693,-0.3270],16);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  {attribution:'© OpenStreetMap contributors'}).addTo(map);
+/* ═══════════════════════════════
+   MAPA
+   ═══════════════════════════════ */
+var map = L.map('map', {zoomControl: true}).setView([39.4693, -0.3270], 16);
 
-// Polígono barrio (límite este = Passeig Marítim, no entra en el mar)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+// Poligono barrio
 L.polygon([
   [39.4745,-0.3325],[39.4745,-0.3295],[39.4730,-0.3240],
   [39.4710,-0.3228],[39.4685,-0.3222],[39.4660,-0.3228],
   [39.4645,-0.3248],[39.4638,-0.3278],[39.4645,-0.3315],
   [39.4668,-0.3332],[39.4700,-0.3335],[39.4725,-0.3330],[39.4745,-0.3325]
-],{
+], {
   color:'#6366f1', weight:1, opacity:0.35,
-  fillColor:'#818cf8', fillOpacity:0.13,
-  dashArray:null
+  fillColor:'#818cf8', fillOpacity:0.13
 }).addTo(map);
 
 // Label barrio
-L.marker([39.4738,-0.3322],{
-  icon:L.divIcon({
-    className:'',iconSize:[170,30],iconAnchor:[0,15],
-    html:`<div style="
-      background:#1e3a8a;
-      border:2px solid #60a5fa;
-      border-radius:8px;
-      padding:6px 14px;
-      font-size:13px;
-      font-weight:800;
-      color:#ffffff;
-      letter-spacing:0.6px;
-      white-space:nowrap;
-      text-align:center;
-      pointer-events:none;
-      box-shadow:0 2px 12px rgba(0,0,0,0.5);
-      text-shadow:0 1px 4px rgba(0,0,0,0.6);
-    ">Cabanyal-Canyamelar</div>`
-  }),interactive:false,zIndexOffset:-1000
+L.marker([39.4738, -0.3322], {
+  icon: L.divIcon({
+    className:'', iconSize:[170,30], iconAnchor:[0,15],
+    html:'<div style="background:#1e3a8a;border:2px solid #60a5fa;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:800;color:#fff;letter-spacing:0.6px;white-space:nowrap;text-align:center;pointer-events:none;box-shadow:0 2px 12px rgba(0,0,0,0.5);text-shadow:0 1px 4px rgba(0,0,0,0.6);">Cabanyal-Canyamelar</div>'
+  }), interactive:false, zIndexOffset:-1000
 }).addTo(map);
 
 // Icono persona
-const personIcon = L.divIcon({
-  className:'',iconSize:[36,36],iconAnchor:[18,36],
-  html:`<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-    <circle cx="18" cy="18" r="17" fill="#2563eb" opacity="0.2"/>
-    <circle cx="18" cy="12" r="6" fill="#1d4ed8"/>
-    <path d="M4 34c0-7.7 6.3-14 14-14s14 6.3 14 14" fill="#1d4ed8"/>
-    <circle cx="18" cy="12" r="5" fill="#fff"/>
-    <path d="M7 34c0-6.1 4.9-11 11-11s11 4.9 11 11" fill="#fff"/>
-  </svg>`
+var personIcon = L.divIcon({
+  className:'', iconSize:[36,36], iconAnchor:[18,36],
+  html:'<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="#2563eb" opacity="0.2"/><circle cx="18" cy="12" r="6" fill="#1d4ed8"/><path d="M4 34c0-7.7 6.3-14 14-14s14 6.3 14 14" fill="#1d4ed8"/><circle cx="18" cy="12" r="5" fill="#fff"/><path d="M7 34c0-6.1 4.9-11 11-11s11 4.9 11 11" fill="#fff"/></svg>'
 });
 
-// Tamaño dinámico según zoom
-function cardSize(z){
-  if(z<=14)return{w:32,h:22,font:6,arr:6};
-  if(z===15)return{w:48,h:32,font:7,arr:7};
-  if(z===16)return{w:62,h:42,font:8,arr:8};
-  if(z===17)return{w:78,h:52,font:9,arr:9};
-  return{w:90,h:60,font:9,arr:10};
+// Tamanio dinamico segun zoom
+function cardSize(z) {
+  if (z <= 14) return {w:32, h:22, font:6, arr:6};
+  if (z === 15) return {w:48, h:32, font:7, arr:7};
+  if (z === 16) return {w:62, h:42, font:8, arr:8};
+  if (z === 17) return {w:78, h:52, font:9, arr:9};
+  return {w:90, h:60, font:9, arr:10};
 }
 
-function makeCard(e,zoom){
-  const s=cardSize(zoom);
-  const img=e.img
-    ?`<img class="fcard-img" src="${e.img}" style="height:${s.h}px;object-position:center center;"
-        onerror="this.outerHTML='<div class=fcard-img-placeholder style=height:${s.h}px;font-size:${Math.round(s.h*.4)}px>${e.emoji}</div>'">`
-    :`<div class="fcard-img-placeholder" style="height:${s.h}px;font-size:${Math.round(s.h*.4)}px">${e.emoji}</div>`;
-  const label=zoom>=15
-    ?`<div class="fcard-label" style="font-size:${s.font}px;border-color:${e.color};color:${e.color}">
-        ${e.nombre.length>16?e.nombre.slice(0,14)+'…':e.nombre}</div>`:'';
-  return`<div class="fcard-wrap">
-    <div class="fcard" style="width:${s.w}px;border-color:${e.color}">${img}${label}</div>
-    <div class="fcard-arrow" style="border-left:${Math.round(s.w*.08)}px solid transparent;
-      border-right:${Math.round(s.w*.08)}px solid transparent;
-      border-top:${s.arr}px solid ${e.color}"></div>
-  </div>`;
+function makeCard(e, zoom) {
+  var s = cardSize(zoom);
+  var img = e.img
+    ? '<img class="fcard-img" src="' + e.img + '" style="height:' + s.h + 'px;object-position:center center;" onerror="this.outerHTML=\'<div class=fcard-img-placeholder style=height:' + s.h + 'px;font-size:' + Math.round(s.h * 0.4) + 'px>' + e.emoji + '</div>\'">'
+    : '<div class="fcard-img-placeholder" style="height:' + s.h + 'px;font-size:' + Math.round(s.h * 0.4) + 'px">' + e.emoji + '</div>';
+  var label = zoom >= 15
+    ? '<div class="fcard-label" style="font-size:' + s.font + 'px;border-color:' + e.color + ';color:' + e.color + '">' + (e.nombre.length > 16 ? e.nombre.slice(0,14) + '\u2026' : e.nombre) + '</div>'
+    : '';
+  return '<div class="fcard-wrap"><div class="fcard" style="width:' + s.w + 'px;border-color:' + e.color + '">' + img + label + '</div><div class="fcard-arrow" style="border-left:' + Math.round(s.w * 0.08) + 'px solid transparent;border-right:' + Math.round(s.w * 0.08) + 'px solid transparent;border-top:' + s.arr + 'px solid ' + e.color + '"></div></div>';
 }
 
-let lMarkers={};
-function buildMarkers(){
-  const zoom=map.getZoom(); const s=cardSize(zoom);
-  Object.values(lMarkers).forEach(m=>map.removeLayer(m)); lMarkers={};
-  EQ.forEach(e=>{
-    const icon=L.divIcon({className:'',iconSize:[s.w,s.h+20],iconAnchor:[s.w/2,s.h+20],html:makeCard(e,zoom)});
-    const m=L.marker([e.lat,e.lng],{icon}).addTo(map);
-    m.on('click',()=>openPanel(e)); lMarkers[e.id]=m;
+var lMarkers = {};
+function buildMarkers() {
+  var zoom = map.getZoom();
+  var s = cardSize(zoom);
+  Object.values(lMarkers).forEach(function(m) { map.removeLayer(m); });
+  lMarkers = {};
+  EQ.forEach(function(e) {
+    var icon = L.divIcon({className:'', iconSize:[s.w, s.h+20], iconAnchor:[s.w/2, s.h+20], html: makeCard(e, zoom)});
+    var m = L.marker([e.lat, e.lng], {icon: icon}).addTo(map);
+    m.on('click', function() { openPanel(e); });
+    lMarkers[e.id] = m;
   });
 }
 buildMarkers();
-map.on('zoomend',buildMarkers);
+map.on('zoomend', buildMarkers);
+setTimeout(function() { map.invalidateSize(); }, 500);
 
-// ── Panel info ──
-function openPanel(e){
-  // Imagen
-  const img=document.getElementById('panel-img');
-  const fb=document.getElementById('panel-fallback');
-  if(e.img){
-    img.src=e.img;img.style.display='block';fb.style.display='none';
-    img.onerror=()=>{img.style.display='none';fb.style.display='flex';fb.textContent=e.emoji;fb.style.background=e.color+'33';};
-  }else{
-    img.style.display='none';fb.style.display='flex';fb.textContent=e.emoji;fb.style.background=e.color+'33';
+/* ── Panel info ── */
+function openPanel(e) {
+  var img = document.getElementById('panel-img');
+  var fb = document.getElementById('panel-fallback');
+  if (e.img) {
+    img.src = e.img; img.style.display = 'block'; fb.style.display = 'none';
+    img.onerror = function() { img.style.display='none'; fb.style.display='flex'; fb.textContent=e.emoji; fb.style.background=e.color+'33'; };
+  } else {
+    img.style.display = 'none'; fb.style.display = 'flex'; fb.textContent = e.emoji; fb.style.background = e.color + '33';
   }
-  // Metadatos
-  document.getElementById('panel-colorbar').style.background=e.color;
-  document.getElementById('panel-tipo-badge').textContent=e.tipo;
-  document.getElementById('panel-nombre').textContent=e.nombre;
-  document.getElementById('panel-historia').style.borderColor=e.color;
-  document.getElementById('panel-historia').textContent=e.historia;
-  document.getElementById('panel-web').href=e.web;
+  document.getElementById('panel-colorbar').style.background = e.color;
+  document.getElementById('panel-tipo-badge').textContent = e.tipo;
+  document.getElementById('panel-nombre').textContent = e.nombre;
+  document.getElementById('panel-historia').style.borderColor = e.color;
+  document.getElementById('panel-historia').textContent = e.historia;
+  document.getElementById('panel-web').href = e.web;
   currentDest = L.latLng(e.lat, e.lng);
 
-  // Redes sociales
-  const social=document.getElementById('panel-social');
-  social.innerHTML='';
-  if(e.instagram){
-    const a=document.createElement('a');
-    a.className='socialBtn ig';a.href=e.instagram;a.target='_blank';
-    a.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg> Instagram';
+  var social = document.getElementById('panel-social');
+  social.innerHTML = '';
+  if (e.instagram) {
+    var a = document.createElement('a');
+    a.className = 'socialBtn ig'; a.href = e.instagram; a.target = '_blank';
+    a.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg> Instagram';
     social.appendChild(a);
   }
-  if(e.facebook){
-    const a=document.createElement('a');
-    a.className='socialBtn fb';a.href=e.facebook;a.target='_blank';
-    a.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Facebook';
-    social.appendChild(a);
+  if (e.facebook) {
+    var a2 = document.createElement('a');
+    a2.className = 'socialBtn fb'; a2.href = e.facebook; a2.target = '_blank';
+    a2.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Facebook';
+    social.appendChild(a2);
   }
-
-  document.getElementById('info-panel').style.display='block';
-  map.panTo([e.lat,e.lng]);
+  document.getElementById('info-panel').style.display = 'block';
+  map.panTo([e.lat, e.lng]);
 }
-function closePanel(){document.getElementById('info-panel').style.display='none';}
 
-// GPS
-let userM = null;
+function closePanel() {
+  document.getElementById('info-panel').style.display = 'none';
+}
+
+/* ═══════════════════════════════
+   ROUTING
+   ═══════════════════════════════ */
+var routeLayer = null;
+var currentDest = null;
+var travelMode = 'foot';
+var navActive = false;
+
+function setTravel(mode, btn) {
+  travelMode = mode;
+  document.querySelectorAll('.travel-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+function routeTo() {
+  if (!currentDest) return;
+  closePanel();
+  if (!userM) { flashMsg('Activa el GPS para calcular la ruta', '#d97706'); return; }
+  flashMsg('Calculando ruta...', '#60a5fa');
+
+  var origin = userM.getLatLng();
+  var servers = {
+    foot: 'https://routing.openstreetmap.de/routed-foot/route/v1/foot',
+    driving: 'https://routing.openstreetmap.de/routed-car/route/v1/driving'
+  };
+  var url = servers[travelMode] + '/'
+    + origin.lng + ',' + origin.lat + ';' + currentDest.lng + ',' + currentDest.lat
+    + '?overview=full&geometries=geojson';
+
+  fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+    if (!data.routes || !data.routes.length) { flashMsg('No se pudo calcular la ruta', '#ef4444'); return; }
+    if (routeLayer) map.removeLayer(routeLayer);
+    map.eachLayer(function(l) { if (l instanceof L.Polyline && l !== routeLayer) map.removeLayer(l); });
+
+    var coords = data.routes[0].geometry.coordinates.map(function(c) { return [c[1], c[0]]; });
+    var dist = (data.routes[0].distance / 1000).toFixed(2);
+    var mins = Math.ceil(data.routes[0].duration / 60);
+    var icon = travelMode === 'foot' ? '\u{1F6B6}' : '\u{1F697}';
+
+    if (travelMode === 'foot') {
+      L.polyline(coords, {color:'#ffffff', weight:10, opacity:0.3, lineCap:'round'}).addTo(map);
+      routeLayer = L.polyline(coords, {color:'#22d3ee', weight:5, opacity:0.95, lineCap:'round', lineJoin:'round', dashArray:'1 12'}).addTo(map);
+    } else {
+      L.polyline(coords, {color:'#0e7490', weight:10, opacity:0.4, lineCap:'round'}).addTo(map);
+      routeLayer = L.polyline(coords, {color:'#22d3ee', weight:6, opacity:0.9, lineCap:'round'}).addTo(map);
+    }
+
+    map.fitBounds(routeLayer.getBounds(), {padding:[70,70]});
+    navActive = true;
+    var badge = document.getElementById('nav-badge');
+    document.getElementById('nav-text').textContent = icon + ' ' + mins + ' min \u00B7 ' + dist + ' km';
+    badge.style.display = 'flex';
+  }).catch(function() { flashMsg('Error de conexion', '#ef4444'); });
+}
+
+function stopNav() {
+  navActive = false;
+  document.getElementById('nav-badge').style.display = 'none';
+  map.eachLayer(function(l) { if (l instanceof L.Polyline) map.removeLayer(l); });
+  routeLayer = null;
+  buildMarkers();
+}
+
+function flashMsg(text, color) {
+  var prev = document.getElementById('flash-msg');
+  if (prev) prev.remove();
+  var d = document.createElement('div');
+  d.id = 'flash-msg';
+  d.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:700;background:rgba(10,15,28,.96);border:1.5px solid ' + color + ';border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;color:' + color + ';white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5);';
+  d.textContent = text;
+  document.body.appendChild(d);
+  setTimeout(function() { d.remove(); }, 3000);
+}
+
+/* ═══════════════════════════════
+   GPS
+   ═══════════════════════════════ */
+var userM = null;
 
 function onGPSSuccess(pos) {
-  const {latitude:la, longitude:ln, accuracy:ac} = pos.coords;
+  var la = pos.coords.latitude;
+  var ln = pos.coords.longitude;
+  var ac = pos.coords.accuracy;
   document.getElementById('gps-permit-btn').style.display = 'none';
   if (userM) {
-    userM.setLatLng([la,ln]);
-    if (navActive) map.panTo([la,ln], {animate:true, duration:0.5});
+    userM.setLatLng([la, ln]);
+    if (navActive) map.panTo([la, ln], {animate:true, duration:0.5});
   } else {
-    userM = L.marker([la,ln],{icon:personIcon,zIndexOffset:9999}).addTo(map);
-    map.setView([la,ln],17);
+    userM = L.marker([la, ln], {icon: personIcon, zIndexOffset: 9999}).addTo(map);
+    map.setView([la, ln], 17);
   }
   document.getElementById('gps-dot').classList.add('on');
-  document.getElementById('gps-text').textContent = `GPS activo (±${Math.round(ac)}m)`;
+  document.getElementById('gps-text').textContent = 'GPS activo (\u00B1' + Math.round(ac) + 'm)';
 }
 
 function onGPSError(err) {
-  const btn = document.getElementById('gps-permit-btn');
+  var btn = document.getElementById('gps-permit-btn');
   btn.style.display = 'block';
   if (err.code === 1) {
     document.getElementById('gps-text').textContent = 'GPS bloqueado';
-    btn.textContent = '⚙️ Ajustes > Safari > Ubicación';
+    btn.textContent = 'Ajustes > Safari > Ubicacion';
     btn.style.background = '#d97706';
   } else {
     document.getElementById('gps-text').textContent = 'Toca para activar GPS';
@@ -524,20 +511,20 @@ function onGPSError(err) {
 }
 
 function requestGPS() {
-  if (!navigator.geolocation) { alert('Tu navegador no soporta geolocalización.'); return; }
-  document.getElementById('gps-permit-btn').textContent = '⏳ Solicitando permiso…';
-  navigator.geolocation.getCurrentPosition(pos => {
+  if (!navigator.geolocation) { alert('Tu navegador no soporta geolocalizacion.'); return; }
+  document.getElementById('gps-permit-btn').textContent = 'Solicitando permiso...';
+  navigator.geolocation.getCurrentPosition(function(pos) {
     onGPSSuccess(pos);
     navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, {enableHighAccuracy:true, maximumAge:2000, timeout:15000});
   }, onGPSError, {enableHighAccuracy:true, timeout:15000});
 }
 
-// BRÚJULA — gira el mapa con el sensor del dispositivo
-let compassActive = false;
-let compassHandler = null;
+/* BRUJULA */
+var compassActive = false;
+var compassHandler = null;
 function toggleCompass() {
-  const btn = document.getElementById('compass-btn');
-  const needle = document.getElementById('compass-needle');
+  var btn = document.getElementById('compass-btn');
+  var needle = document.getElementById('compass-needle');
   if (compassActive) {
     compassActive = false;
     btn.classList.remove('active');
@@ -549,12 +536,12 @@ function toggleCompass() {
   }
   compassActive = true;
   btn.classList.add('active');
-  compassHandler = (e) => {
-    const heading = e.webkitCompassHeading ?? (e.absolute ? -e.alpha : null);
+  compassHandler = function(e) {
+    var heading = e.webkitCompassHeading !== undefined ? e.webkitCompassHeading : (e.absolute ? -e.alpha : null);
     if (heading == null) return;
-    needle.style.transform = `rotate(${heading}deg)`;
+    needle.style.transform = 'rotate(' + heading + 'deg)';
     map.getContainer().style.transformOrigin = '50% 50%';
-    map.getContainer().style.transform = `rotate(${-heading}deg)`;
+    map.getContainer().style.transform = 'rotate(' + (-heading) + 'deg)';
   };
   if ('ondeviceorientationabsolute' in window) {
     window.addEventListener('deviceorientationabsolute', compassHandler);
@@ -563,112 +550,118 @@ function toggleCompass() {
   }
 }
 
-// Intentar automáticamente al cargar
+// Intentar GPS automaticamente al cargar
 if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(pos => {
+  navigator.geolocation.getCurrentPosition(function(pos) {
     onGPSSuccess(pos);
     navigator.geolocation.watchPosition(onGPSSuccess, onGPSError, {enableHighAccuracy:true, maximumAge:2000, timeout:15000});
-  }, () => {
+  }, function() {
     document.getElementById('gps-text').textContent = 'Toca para activar GPS';
     document.getElementById('gps-permit-btn').style.display = 'block';
   }, {enableHighAccuracy:true, timeout:5000});
-});
-
-// BUSCADOR
-function renderDD(items){
-  const dd=document.getElementById('search-dropdown');
-  if(!items.length){dd.style.display='none';return;}
-  dd.innerHTML=items.map(e=>`
-    <div class="s-item" onmousedown="selectEQ(${e.id})">
-      <div class="s-dot" style="background:${e.color}"></div>
-      <div><div class="s-name">${e.nombre}</div><div class="s-tipo">${e.tipo}</div></div>
-    </div>`).join('');
-  dd.style.display='block';
-}
-function filterSearch(v){const q=v.toLowerCase().trim();renderDD(q?EQ.filter(e=>e.nombre.toLowerCase().includes(q)||e.tipo.toLowerCase().includes(q)):EQ);}
-function showDD(){renderDD(EQ);}
-function hideDD(){setTimeout(()=>{document.getElementById('search-dropdown').style.display='none';},180);}
-function selectEQ(id){
-  const e=EQ.find(x=>x.id===id);if(!e)return;
-  document.getElementById('search-input').value=e.nombre;
-  document.getElementById('search-dropdown').style.display='none';
-  map.setView([e.lat,e.lng],18,{animate:true});
-  setTimeout(()=>openPanel(e),400);
 }
 
-// AR — lazy loading (cámara solo se activa al pulsar botón AR)
-let arBuilt = false;
+/* ═══════════════════════════════
+   BUSCADOR
+   ═══════════════════════════════ */
+function renderDD(items) {
+  var dd = document.getElementById('search-dropdown');
+  if (!items.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = items.map(function(e) {
+    return '<div class="s-item" onmousedown="selectEQ(' + e.id + ')"><div class="s-dot" style="background:' + e.color + '"></div><div><div class="s-name">' + e.nombre + '</div><div class="s-tipo">' + e.tipo + '</div></div></div>';
+  }).join('');
+  dd.style.display = 'block';
+}
+function filterSearch(v) {
+  var q = v.toLowerCase().trim();
+  renderDD(q ? EQ.filter(function(e) { return e.nombre.toLowerCase().indexOf(q) !== -1 || e.tipo.toLowerCase().indexOf(q) !== -1; }) : EQ);
+}
+function showDD() { renderDD(EQ); }
+function hideDD() { setTimeout(function() { document.getElementById('search-dropdown').style.display = 'none'; }, 180); }
+function selectEQ(id) {
+  var e = EQ.find(function(x) { return x.id === id; });
+  if (!e) return;
+  document.getElementById('search-input').value = e.nombre;
+  document.getElementById('search-dropdown').style.display = 'none';
+  map.setView([e.lat, e.lng], 18, {animate:true});
+  setTimeout(function() { openPanel(e); }, 400);
+}
+
+/* ═══════════════════════════════
+   AR — lazy loading
+   ═══════════════════════════════ */
+var arBuilt = false;
 
 function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
+  return new Promise(function(resolve, reject) {
+    var s = document.createElement('script');
     s.src = src; s.onload = resolve; s.onerror = reject;
     document.head.appendChild(s);
   });
 }
 
-async function launchAR() {
-  const container = document.getElementById('ar-container');
-  container.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#60a5fa;font-size:14px;font-weight:600;">⏳ Cargando cámara AR…</div>';
+function launchAR() {
+  var container = document.getElementById('ar-container');
+  container.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#60a5fa;font-size:14px;font-weight:600;">Cargando camara AR...</div>';
 
-  try {
-    if (!window.AFRAME) {
-      await loadScript('https://aframe.io/releases/1.4.0/aframe.min.js');
-      await loadScript('https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js');
-    }
-  } catch(e) {
-    container.innerHTML = '<div style="padding:20px;color:#ef4444;text-align:center;font-size:13px">❌ Error cargando AR.<br>Comprueba la conexión e inténtalo de nuevo.</div>';
-    return;
-  }
-
-  container.innerHTML = '';
-  const scene = document.createElement('a-scene');
-  scene.setAttribute('vr-mode-ui','enabled:false');
-  scene.setAttribute('arjs','sourceType:webcam; videoTexture:true; debugUIEnabled:false; trackingMethod:best;');
-  scene.setAttribute('renderer','antialias:true; alpha:true');
-  scene.setAttribute('embedded','');
-  const cam = document.createElement('a-camera');
-  cam.setAttribute('gps-camera','');
-  cam.setAttribute('rotation-reader','');
-  scene.appendChild(cam);
-  container.appendChild(scene);
-
-  const addMarkers = () => {
-    EQ.forEach(e => {
-      const ent = document.createElement('a-entity');
-      ent.setAttribute('gps-entity-place',`latitude:${e.lat}; longitude:${e.lng}`);
-      ent.setAttribute('look-at','[gps-camera]'); ent.setAttribute('scale','15 15 15');
-      const bg = document.createElement('a-box');
-      bg.setAttribute('color',e.color); bg.setAttribute('opacity','0.88');
-      bg.setAttribute('width','6'); bg.setAttribute('height','1.4');
-      bg.setAttribute('depth','0.12'); bg.setAttribute('position','0 1.5 -0.06');
-      const tx = document.createElement('a-text');
-      tx.setAttribute('value',`${e.emoji} ${e.nombre}\n${e.tipo}`);
-      tx.setAttribute('color','white'); tx.setAttribute('align','center');
-      tx.setAttribute('width','5.5'); tx.setAttribute('position','0 1.5 0');
-      const ci = document.createElement('a-circle');
-      ci.setAttribute('color',e.color); ci.setAttribute('opacity','0.5');
-      ci.setAttribute('radius','0.4'); ci.setAttribute('rotation','-90 0 0');
-      ci.setAttribute('position','0 0.01 0');
-      ent.appendChild(bg); ent.appendChild(tx); ent.appendChild(ci);
-      scene.appendChild(ent);
+  var p = Promise.resolve();
+  if (!window.AFRAME) {
+    p = loadScript('https://aframe.io/releases/1.4.0/aframe.min.js').then(function() {
+      return loadScript('https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js');
     });
-    arBuilt = true;
-  };
+  }
+  p.then(function() {
+    container.innerHTML = '';
+    var scene = document.createElement('a-scene');
+    scene.setAttribute('vr-mode-ui', 'enabled:false');
+    scene.setAttribute('arjs', 'sourceType:webcam; videoTexture:true; debugUIEnabled:false; trackingMethod:best;');
+    scene.setAttribute('renderer', 'antialias:true; alpha:true');
+    scene.setAttribute('embedded', '');
+    var cam = document.createElement('a-camera');
+    cam.setAttribute('gps-camera', '');
+    cam.setAttribute('rotation-reader', '');
+    scene.appendChild(cam);
+    container.appendChild(scene);
 
-  scene.hasLoaded ? addMarkers() : scene.addEventListener('loaded', addMarkers);
+    function addMarkers() {
+      EQ.forEach(function(e) {
+        var ent = document.createElement('a-entity');
+        ent.setAttribute('gps-entity-place', 'latitude:' + e.lat + '; longitude:' + e.lng);
+        ent.setAttribute('look-at', '[gps-camera]');
+        ent.setAttribute('scale', '15 15 15');
+        var bg = document.createElement('a-box');
+        bg.setAttribute('color', e.color); bg.setAttribute('opacity', '0.88');
+        bg.setAttribute('width', '6'); bg.setAttribute('height', '1.4');
+        bg.setAttribute('depth', '0.12'); bg.setAttribute('position', '0 1.5 -0.06');
+        var tx = document.createElement('a-text');
+        tx.setAttribute('value', e.emoji + ' ' + e.nombre + '\n' + e.tipo);
+        tx.setAttribute('color', 'white'); tx.setAttribute('align', 'center');
+        tx.setAttribute('width', '5.5'); tx.setAttribute('position', '0 1.5 0');
+        var ci = document.createElement('a-circle');
+        ci.setAttribute('color', e.color); ci.setAttribute('opacity', '0.5');
+        ci.setAttribute('radius', '0.4'); ci.setAttribute('rotation', '-90 0 0');
+        ci.setAttribute('position', '0 0.01 0');
+        ent.appendChild(bg); ent.appendChild(tx); ent.appendChild(ci);
+        scene.appendChild(ent);
+      });
+      arBuilt = true;
+    }
+    if (scene.hasLoaded) { addMarkers(); } else { scene.addEventListener('loaded', addMarkers); }
+  }).catch(function() {
+    container.innerHTML = '<div style="padding:20px;color:#ef4444;text-align:center;font-size:13px">Error cargando AR. Comprueba la conexion.</div>';
+  });
 }
 
-function setMode(mode){
-  document.getElementById('btn-map').classList.toggle('active',mode==='map');
-  document.getElementById('btn-ar').classList.toggle('active',mode==='ar');
-  document.getElementById('map-container').style.display=mode==='map'?'block':'none';
-  document.getElementById('ar-container').style.display=mode==='ar'?'block':'none';
-  document.getElementById('ar-hint').style.display=mode==='ar'?'block':'none';
-  document.getElementById('gps-badge').style.display=mode==='map'?'block':'none';
-  document.getElementById('search-bar').style.display=mode==='map'?'block':'none';
-  if(mode==='map'){closePanel();setTimeout(()=>map.invalidateSize(),100);}
-  else if(!arBuilt){ launchAR(); }
+function setMode(mode) {
+  document.getElementById('btn-map').classList.toggle('active', mode === 'map');
+  document.getElementById('btn-ar').classList.toggle('active', mode === 'ar');
+  document.getElementById('map-container').style.display = mode === 'map' ? 'block' : 'none';
+  document.getElementById('ar-container').style.display = mode === 'ar' ? 'block' : 'none';
+  document.getElementById('ar-hint').style.display = mode === 'ar' ? 'block' : 'none';
+  document.getElementById('gps-badge').style.display = mode === 'map' ? 'block' : 'none';
+  document.getElementById('search-bar').style.display = mode === 'map' ? 'block' : 'none';
+  if (mode === 'map') { closePanel(); setTimeout(function() { map.invalidateSize(); }, 100); }
+  else if (!arBuilt) { launchAR(); }
 }
 </script>
 </body>
