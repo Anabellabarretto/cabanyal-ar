@@ -566,15 +566,7 @@ function selectEQ(id){
   setTimeout(()=>openPanel(e),400);
 }
 
-// AR
-let arBuilt=false;
-function buildAR(){
-  const scene=document.querySelector('a-scene');
-  EQ.forEach(e=>{
-    const ent=document.createElement('a-entity');
-    ent.setAttribute('gps-entity-place',`latitude:${e.lat}; longitude:${e.lng}`);
-    ent.setAttribute('look-at','[gps-camera]');ent.setAttribute('scale','15 15 15');
-    const bg=document.createElement('a-box// AR — lazy loading (cámara solo se activa al pulsar botón AR)
+// AR — lazy loading (cámara solo se activa al pulsar botón AR)
 let arBuilt = false;
 
 function loadScript(src) {
@@ -637,7 +629,12 @@ async function launchAR() {
   scene.hasLoaded ? addMarkers() : scene.addEventListener('loaded', addMarkers);
 }
 
-yId('ar-hint').style.display=mode==='ar'?'block':'none';
+function setMode(mode){
+  document.getElementById('btn-map').classList.toggle('active',mode==='map');
+  document.getElementById('btn-ar').classList.toggle('active',mode==='ar');
+  document.getElementById('map-container').style.display=mode==='map'?'block':'none';
+  document.getElementById('ar-container').style.display=mode==='ar'?'block':'none';
+  document.getElementById('ar-hint').style.display=mode==='ar'?'block':'none';
   document.getElementById('gps-badge').style.display=mode==='map'?'block':'none';
   document.getElementById('search-bar').style.display=mode==='map'?'block':'none';
   if(mode==='map'){closePanel();setTimeout(()=>map.invalidateSize(),100);}
